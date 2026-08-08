@@ -70,7 +70,14 @@ describe.skipIf(!available)("db", () => {
     it("upserts and reads back", async () => {
       await upsertAthlete({ id: "a1", name: "Ada", avatar: "https://img/a.png", tokens });
       const a = await getAthlete("a1");
-      expect(a).toEqual({ id: "a1", name: "Ada", avatar: "https://img/a.png", tokens });
+      // Reads carry the athlete id so the record can go straight to the Strava
+      // client, which needs it to refresh.
+      expect(a).toEqual({
+        id: "a1",
+        name: "Ada",
+        avatar: "https://img/a.png",
+        tokens: { ...tokens, athleteId: "a1" },
+      });
     });
 
     it("upsert on conflict updates profile and tokens", async () => {
@@ -100,6 +107,7 @@ describe.skipIf(!available)("db", () => {
         accessToken: "acc-new",
         refreshToken: "ref-ROTATED",
         expiresAt: 1_900_000_000,
+        athleteId: "a1",
       });
     });
 

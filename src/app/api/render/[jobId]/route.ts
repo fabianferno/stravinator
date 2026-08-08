@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getJob } from "@/lib/jobs";
+import { getJobArtifacts } from "@/lib/jobs";
 import type { RenderPayload } from "@/lib/types";
 
 /**
@@ -15,16 +15,19 @@ export async function GET(req: Request, ctx: { params: Promise<{ jobId: string }
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const job = await getJob(jobId);
-  if (!job) return NextResponse.json({ error: "not-found" }, { status: 404 });
+  const artifacts = await getJobArtifacts(jobId);
+  if (!artifacts) return NextResponse.json({ error: "not-found" }, { status: 404 });
 
-  const { keyframes, stats, route, routeProgressIndex } = job as unknown as RenderPayload & {
-    keyframes: RenderPayload["keyframes"];
-  };
-
-  if (!keyframes?.length || !route?.length) {
+  const { keyframes, stats, route } = artifacts;
+  if (!keyframes?.length || !route?.length || !stats) {
     return NextResponse.json({ error: "job-not-prepared" }, { status: 409 });
   }
+
+  // Derived rather than stored: how far the route line is drawn is exactly the
+  // camera's progress along it, so persisting it separately would be a second
+  // copy of the same fact and a chance for the two to disagree.
+  const last = route.length - 1;
+  const routeProgressIndex = keyframes.map((k) => Math.round(k.progress * last));
 
   const payload: RenderPayload = { jobId, stats, keyframes, route, routeProgressIndex };
   return NextResponse.json(payload);

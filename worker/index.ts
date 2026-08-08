@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { captureVideo } from "./capture";
+import type { RawTrack } from "../src/lib/types";
 
 const WORKER_ID = process.env.WORKER_ID ?? `worker-${randomUUID().slice(0, 8)}`;
 const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
@@ -77,15 +78,15 @@ async function runJob(job: { id: string; athleteId: string; activityId: string }
 
     // 2. Turn noisy GPS into a cinematic camera path.
     await jobs.setStatus(job.id, "smoothing");
-    const { buildCameraPath, frameCountFor } = await import("../src/lib/track");
+    const { buildCameraPath, frameCountFor, toStats, routeFrom } = await import(
+      "../src/lib/track"
+    );
     const frameCount = frameCountFor(track);
     const keyframes = buildCameraPath(track, frameCount);
-    const { stats, route, routeProgressIndex } = await buildRenderInputs(track, keyframes);
     await jobs.setStatus(job.id, "rendering", {
       keyframes,
-      stats,
-      route,
-      routeProgressIndex,
+      stats: toStats(track),
+      route: routeFrom(track),
       frameCount,
     });
 
@@ -95,8 +96,9 @@ async function runJob(job: { id: string; athleteId: string; activityId: string }
       url: `${APP_URL}/render?job=${encodeURIComponent(job.id)}`,
       outPath,
       tileCacheDir: TILE_CACHE_DIR,
-      onProgress: (frame, total) =>
-        jobs.setStatus(job.id, "rendering", { framesDone: frame, progress: frame / total }),
+      onProgress: async (frame, total) => {
+        await jobs.setStatus(job.id, "rendering", { framesDone: frame, progress: frame / total });
+      },
     });
 
     // 4. Publish.
@@ -137,7 +139,7 @@ function userFacingReason(err: unknown): string {
   return "Something went wrong while making your flyover. Please try again.";
 }
 
-async function fetchTrack(athleteId: string, activityId: string) {
+async function fetchTrack(athleteId: string, activityId: string): Promise<RawTrack> {
   const { getAthleteTokens, saveAthleteTokens } = await import("../src/lib/db/athletes");
   const strava = await import("../src/lib/strava");
 
@@ -161,18 +163,6 @@ async function fetchTrack(athleteId: string, activityId: string) {
     if (strava.hasRotatedTokens(err)) await saveAthleteTokens(athleteId, err.rotatedTokens);
     throw err;
   }
-}
-
-async function buildRenderInputs(
-  track: Awaited<ReturnType<typeof fetchTrack>>,
-  keyframes: Awaited<ReturnType<typeof import("../src/lib/track").buildCameraPath>>,
-) {
-  const { toStats, routeFrom, progressIndices } = await import("../src/lib/track");
-  return {
-    stats: toStats(track),
-    route: routeFrom(track),
-    routeProgressIndex: progressIndices(track, keyframes),
-  };
 }
 
 /**

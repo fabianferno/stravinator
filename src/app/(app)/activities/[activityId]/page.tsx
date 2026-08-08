@@ -16,11 +16,16 @@ export default async function ActivityConfirmPage({
   const athleteId = await getAthleteId();
   if (!athleteId) redirect("/errors/session-expired");
 
+  // Fetch inside the try, render outside it: `redirect` works by throwing, so
+  // rendering in here would let the catch swallow the navigation.
   let activity;
   try {
     activity = await getActivitySummary(athleteId, activityId);
   } catch (err) {
     if (err instanceof StravaAuthError) redirect("/errors/session-expired");
+  }
+
+  if (!activity) {
     return (
       <ErrorScreen
         kind="render-failed"

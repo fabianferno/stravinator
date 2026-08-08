@@ -25,12 +25,8 @@ export async function GET(req: Request) {
     await upsertAthlete({
       id: tokens.athleteId,
       name: athlete ? `${athlete.firstname ?? ""} ${athlete.lastname ?? ""}`.trim() : "Athlete",
-      avatar: athlete?.profile_medium ?? null,
-      tokens: {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresAt: tokens.expiresAt,
-      },
+      avatar: athlete?.profile ?? null,
+      tokens,
     });
 
     await setSession(tokens.athleteId);

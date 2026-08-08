@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ResultScreen } from "@/components/screens/ResultScreen";
 import { getAthleteId } from "@/lib/session";
-import { getJob } from "@/lib/jobs";
-import type { ActivityStats } from "@/lib/types";
+import { getJob, getJobArtifacts } from "@/lib/jobs";
 
 export const metadata = { title: "That's your run — Stravinator" };
 export const dynamic = "force-dynamic";
@@ -20,11 +19,14 @@ export default async function ResultPage({ params }: PageProps<"/jobs/[jobId]">)
   // empty player.
   if (job.status !== "done") redirect(`/jobs/${jobId}`);
 
-  const stats = (job as unknown as { stats: ActivityStats }).stats;
+  // A `done` job always has artifacts; if it somehow doesn't, the video is
+  // unlabellable and there is nothing honest to show.
+  const artifacts = await getJobArtifacts(jobId);
+  if (!artifacts?.stats) notFound();
 
   return (
     <ResultScreen
-      stats={stats}
+      stats={artifacts.stats}
       videoUrl={job.videoUrl}
       downloadHref={`/api/jobs/${jobId}/video`}
       makeAnotherHref="/activities"

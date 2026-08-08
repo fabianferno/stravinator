@@ -12,33 +12,41 @@ export default async function ActivitiesPage() {
   const athleteId = await getAthleteId();
   if (!athleteId) redirect("/errors/session-expired");
 
+  // Fetch inside the try, render outside it: `redirect` works by throwing, so
+  // rendering in here would let the catch swallow the navigation.
+  let activities;
+  let failure: string | null = null;
+
   try {
-    const activities = await getActivities(athleteId);
-    return (
-      <ActivityListScreen
-        activities={activities}
-        hrefFor={(activity) => `/activities/${activity.id}`}
-        backHref="/"
-      />
-    );
+    activities = await getActivities(athleteId);
   } catch (err) {
     if (err instanceof StravaAuthError) redirect("/errors/session-expired");
 
     // Rate limiting is app-wide, not this athlete's fault, so say so honestly
     // rather than implying they did something wrong.
-    const detail =
+    failure =
       err instanceof StravaRateLimitError
         ? "Stravinator is briefly over its Strava request limit. Try again in a few minutes."
         : "We couldn't reach Strava just now.";
+  }
 
+  if (failure || !activities) {
     return (
       <ErrorScreen
         kind="render-failed"
         title="Couldn't load your runs"
-        detail={detail}
+        detail={failure ?? "We couldn't reach Strava just now."}
         action={{ label: "Try again", href: "/activities" }}
         backHref="/"
       />
     );
   }
+
+  return (
+    <ActivityListScreen
+      activities={activities}
+      hrefFor={(activity) => `/activities/${activity.id}`}
+      backHref="/"
+    />
+  );
 }

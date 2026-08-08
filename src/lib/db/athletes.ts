@@ -1,11 +1,25 @@
 import { query } from "./pool";
 
+/**
+ * Structurally identical to `StravaTokens`, deliberately: these values are
+ * handed straight to the Strava client and back, so a second shape would only
+ * mean mapping between them at every call site.
+ */
 export interface AthleteTokens {
   accessToken: string;
   refreshToken: string;
   /** epoch seconds */
   expiresAt: number;
+  /**
+   * Present on read so the record can be handed straight to the Strava client,
+   * which needs it to refresh. Writes omit it — it is already the row key, and
+   * accepting it there would invite the two disagreeing.
+   */
+  athleteId: string;
 }
+
+/** What callers supply when persisting tokens. */
+export type AthleteTokensInput = Omit<AthleteTokens, "athleteId">;
 
 export interface AthleteRecord {
   id: string;
@@ -27,6 +41,7 @@ const toTokens = (r: Row): AthleteTokens => ({
   accessToken: r.access_token,
   refreshToken: r.refresh_token,
   expiresAt: Math.floor(r.token_expires_at.getTime() / 1000),
+  athleteId: r.id,
 });
 
 /**
@@ -47,7 +62,7 @@ export async function getAthleteTokens(athleteId: string): Promise<AthleteTokens
  * written together — persisting only the access token would strand the athlete
  * at the next refresh.
  */
-export async function saveAthleteTokens(athleteId: string, tokens: AthleteTokens): Promise<void> {
+export async function saveAthleteTokens(athleteId: string, tokens: AthleteTokensInput): Promise<void> {
   const { rowCount } = await query(
     `UPDATE athletes
         SET access_token = $2, refresh_token = $3,
@@ -62,7 +77,7 @@ export async function upsertAthlete(a: {
   id: string;
   name: string;
   avatar: string | null;
-  tokens: AthleteTokens;
+  tokens: AthleteTokensInput;
 }): Promise<void> {
   await query(
     `INSERT INTO athletes (id, name, avatar_url, access_token, refresh_token, token_expires_at)
