@@ -42,6 +42,12 @@ export interface CaptureOptions {
    * set this for a job whose output an athlete will see.
    */
   allowPlaceholder?: boolean;
+  /**
+   * Shared secret for `/api/render/[jobId]`. The scene fetches its payload from
+   * inside the page, so the header has to be attached at the browser context —
+   * there is no other hook between `goto` and that request.
+   */
+  workerToken?: string;
 }
 
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
@@ -59,6 +65,7 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
     frameRetries = DEFAULT_FRAME_RETRIES,
     maxFrames,
     allowPlaceholder = false,
+    workerToken = process.env.WORKER_TOKEN,
   } = opts;
 
   const deadline = Date.now() + timeoutMs;
@@ -86,6 +93,7 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
     const page = await browser.newPage({
       viewport: { width: OUTPUT.width, height: OUTPUT.height },
       deviceScaleFactor: 1,
+      extraHTTPHeaders: workerToken ? { "x-worker-token": workerToken } : undefined,
     });
 
     // Surface page errors instead of letting them turn into blank frames.

@@ -54,11 +54,13 @@ npm run worker   # render worker, in a second terminal
 
 ```bash
 npm test                                  # unit + queue integration
-npx tsx worker/smoke.ts 60                # end-to-end: real page → real ffmpeg → playable MP4
+npx tsx worker/smoke.ts 60                # scene → ffmpeg, using the built-in fixture payload
+npx tsx worker/smoke-job.ts 45            # the full path: Postgres job → API route → capture
 ```
 
-The queue tests need Postgres and skip with a printed message if none is reachable. The smoke test
-needs a dev server running.
+The queue tests need Postgres and skip with a printed message if none is reachable. Both smoke
+tests need a dev server running; `smoke-job.ts` additionally needs `DATABASE_URL` and a
+`WORKER_TOKEN` matching the server's.
 
 ## Known gaps
 
