@@ -1,0 +1,9 @@
+.matrix {
+  display: block;
+  width: 100%;
+  height: 88px;
+}
+
+.matrix-mid {
+  height: 62px;
+}

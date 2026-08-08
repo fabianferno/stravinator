@@ -1,0 +1,135 @@
+.card {
+  border-radius: var(--r-card);
+  background: var(--raised);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-magenta {
+  background: var(--grad-magenta);
+}
+
+.card-blue {
+  background: var(--grad-blue);
+}
+
+.card-tall {
+  min-height: 386px;
+}
+
+.card-centred {
+  align-items: center;
+  justify-content: center;
+}
+
+/* keep the canvas measurable when the card centres its children */
+.card-centred .readout {
+  width: 100%;
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.card-meta {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 26px;
+}
+
+.readout-flush {
+  margin-top: 0;
+}
+
+.readout-unit {
+  font-size: 13px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.02em;
+}
+
+.duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.mini {
+  border-radius: var(--r-mid);
+  background: var(--raised);
+  padding: 16px;
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mini-blue {
+  background: var(--grad-blue);
+}
+
+.mini-label {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.mini-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.mini-n {
+  font-size: 30px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-u {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--text-mid);
+}
+
+.mini-blue .mini-u {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* decorative route bed pinned to the bottom of a hero card */
+.route-bed {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 190px;
+  pointer-events: none;
+}
+
+.route-bed svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

@@ -1,0 +1,48 @@
+/* ============================================================
+   Stravinator design tokens — spec §8.1
+   Single committed dark theme ("nocturnal"). Every colour is
+   painted explicitly; there is deliberately no light theme.
+   ============================================================ */
+
+:root {
+  --ground: #050505;
+  --raised: #0e0e11;
+  --raised-2: #16161b;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --text: #ffffff;
+  --text-mid: rgba(255, 255, 255, 0.62);
+  --text-dim: rgba(255, 255, 255, 0.42);
+
+  --magenta: #ee4fa6;
+  --plum: #140512;
+  --blue: #3f53c8;
+  --indigo: #10143c;
+  --orange: #ff6a2e;
+  --red: #8e1620;
+  --lime: #c8f135;
+
+  --grad-magenta: linear-gradient(
+    176deg,
+    #ee4fa6 0%,
+    #c33a8e 26%,
+    #7e2168 56%,
+    #3d0f36 82%,
+    #140512 100%
+  );
+  --grad-blue: linear-gradient(172deg, #4a5edc 0%, #3143a8 32%, #1b2264 68%, #10143c 100%);
+  /* Semantic: recoverable failure ONLY. Never decorative. */
+  --grad-fire: linear-gradient(172deg, #ff8a3d 0%, #ff6a2e 30%, #c4202e 68%, #5c0d14 100%);
+
+  --r-card: 32px;
+  --r-mid: 22px;
+  --r-sm: 14px;
+  --r-pill: 999px;
+
+  --ui: var(--font-poppins), "Poppins", ui-rounded, -apple-system, "Segoe UI Variable",
+    "Segoe UI", system-ui, sans-serif;
+
+  /* shell widths — desktop is a widened mobile layout, not a new design */
+  --shell-max: 430px;
+  --shell-max-lg: 720px;
+}

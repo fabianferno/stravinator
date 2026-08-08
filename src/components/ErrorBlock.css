@@ -1,0 +1,56 @@
+.err {
+  border-radius: var(--r-card);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.err-neutral {
+  background: var(--raised);
+}
+
+/* recoverable failure only — see ErrorBlock.tsx */
+.err-hot {
+  background: var(--grad-fire);
+}
+
+.err-kind {
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+
+.err-hot .err-kind {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.err-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.err-body {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-mid);
+}
+
+.err-hot .err-body {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.err-action {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.err-hot .btn-quiet {
+  border-color: rgba(255, 255, 255, 0.5);
+}
