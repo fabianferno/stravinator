@@ -1,0 +1,19 @@
+{
+  "activityId": "1006",
+  "name": "Treadmill artifact",
+  "startDate": "2026-08-01T07:30:00Z",
+  "distance": 0,
+  "movingTime": 1,
+  "elevationGain": 0,
+  "sportType": "Run",
+  "points": [
+    {
+      "lng": -0.1278,
+      "lat": 51.5074,
+      "ele": 25,
+      "t": 0,
+      "dist": 0,
+      "vel": 3
+    }
+  ]
+}
