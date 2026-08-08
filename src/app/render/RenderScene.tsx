@@ -6,12 +6,15 @@ import { useSearchParams } from "next/navigation";
 // Mapbox's own stylesheet, scoped to this route rather than the app shell so
 // the page-shell agent's globals.css stays untouched.
 import "mapbox-gl/dist/mapbox-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 import { ATTRIBUTION, OUTPUT, type RenderPayload } from "@/lib/types";
 import { loadPayload } from "@/lib/scene/payload";
 import { createMapboxEngine } from "@/lib/scene/mapboxEngine";
+import { createMaplibreEngine, MAPTERHORN_ATTRIBUTION } from "@/lib/scene/maplibreEngine";
+import { createStylizedEngine } from "@/lib/scene/stylizedEngine";
 import { createPlaceholderEngine } from "@/lib/scene/placeholderEngine";
-import type { SceneEngine } from "@/lib/scene/engine";
+import type { SceneEngine, SceneInput } from "@/lib/scene/engine";
 import { hudOpacity, introOpacity, outroOpacity } from "@/lib/scene/cards";
 import {
   formatDate,
@@ -25,6 +28,61 @@ import styles from "./render.module.css";
 
 /** A seek that hasn't settled by now is a failed frame, not a slow one. */
 const FRAME_TIMEOUT_MS = 20_000;
+
+/**
+ * Which renderer paints the scene. Selected with `?engine=` so the owner can
+ * compare visual directions from real frames rather than from descriptions.
+ *
+ *  - `mapbox`      photographic satellite terrain (billed per tile)
+ *  - `maplibre`    open elevation + shaded relief, no imagery, no per-tile cost
+ *  - `stylized`    open elevation drawn in the nocturnal identity
+ *  - `placeholder` synthetic wireframe, not real data, never shippable
+ */
+const ENGINE_NAMES = ["mapbox", "maplibre", "stylized", "placeholder"] as const;
+type EngineName = (typeof ENGINE_NAMES)[number];
+
+function parseEngine(raw: string | null): EngineName | null {
+  if (!raw) return null;
+  const match = ENGINE_NAMES.find((n) => n === raw);
+  if (!match) {
+    throw new Error(`unknown engine "${raw}" — expected one of ${ENGINE_NAMES.join(", ")}`);
+  }
+  return match;
+}
+
+/** Attribution is a licensing requirement, so it tracks the sources actually used. */
+function attributionFor(engine: EngineName | null): readonly string[] {
+  switch (engine) {
+    // No imagery and no vector basemap: elevation is the only third-party
+    // source in play, and Mapterhorn's TileJSON asks for exactly this string.
+    case "maplibre":
+    case "stylized":
+      return ["Powered by Strava", MAPTERHORN_ATTRIBUTION];
+    default:
+      return ATTRIBUTION;
+  }
+}
+
+function createEngine(engine: EngineName, input: SceneInput, token: string | undefined): SceneEngine {
+  switch (engine) {
+    case "mapbox":
+      if (!token) {
+        throw new Error("engine=mapbox requires NEXT_PUBLIC_MAPBOX_TOKEN to be set");
+      }
+      return createMapboxEngine(input, token);
+    case "maplibre":
+      return createMaplibreEngine(input);
+    case "stylized":
+      return createStylizedEngine(input);
+    case "placeholder":
+      // Never silently ship this as a video; `isReal` is false and the capture
+      // driver refuses it unless explicitly allowed.
+      console.warn(
+        "[stravinator] rendering PLACEHOLDER terrain — synthetic heights, not real elevation.",
+      );
+      return createPlaceholderEngine(input);
+  }
+}
 
 /**
  * The capture driver's contract. `worker/capture.ts` declares the same three
@@ -49,12 +107,13 @@ export default function RenderScene() {
   const params = useSearchParams();
   const jobId = params.get("job");
   const fixture = params.get("fixture") === "1";
+  const requestedEngine = params.get("engine");
 
   const mapHostRef = useRef<HTMLDivElement>(null);
   const [payload, setPayload] = useState<RenderPayload | null>(null);
   const [frame, setFrame] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [placeholder, setPlaceholder] = useState(false);
+  const [engineName, setEngineName] = useState<EngineName | null>(null);
 
   // The stage is a fixed 1080x1920 surface, never responsive: the capture
   // driver sizes its viewport to match and screenshots the whole thing.
@@ -95,7 +154,7 @@ export default function RenderScene() {
         if (!host) throw new Error("map host missing");
 
         const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-        const input = {
+        const input: SceneInput = {
           container: host,
           keyframes: data.keyframes,
           route: data.route,
@@ -103,17 +162,12 @@ export default function RenderScene() {
           frameTimeoutMs: FRAME_TIMEOUT_MS,
         };
 
-        if (token) {
-          engine = createMapboxEngine(input, token);
-        } else {
-          // No token: draw the clearly-marked placeholder so the frame-stepping
-          // contract stays testable. Never silently ship this as a video.
-          console.warn(
-            "[stravinator] NEXT_PUBLIC_MAPBOX_TOKEN is unset — rendering PLACEHOLDER terrain, not real map tiles.",
-          );
-          flushSync(() => setPlaceholder(true));
-          engine = createPlaceholderEngine(input);
-        }
+        // Default behaviour is unchanged: Mapbox when a token is configured,
+        // the clearly-marked placeholder when it is not. `?engine=` only ever
+        // overrides that explicitly.
+        const chosen = parseEngine(requestedEngine) ?? (token ? "mapbox" : "placeholder");
+        flushSync(() => setEngineName(chosen));
+        engine = createEngine(chosen, input, token);
 
         await engine.ready;
         if (cancelled) return;
@@ -162,7 +216,7 @@ export default function RenderScene() {
       delete w.sceneReady;
       delete w.sceneInfo;
     };
-  }, [jobId, fixture]);
+  }, [jobId, fixture, requestedEngine]);
 
   const frameCount = payload?.keyframes.length ?? 0;
   const stats = payload?.stats;
@@ -179,10 +233,8 @@ export default function RenderScene() {
       <div ref={mapHostRef} className={styles.map} />
       <div className={styles.vignette} aria-hidden />
 
-      {placeholder && (
-        <div className={styles.placeholderBadge}>
-          Placeholder terrain — no Mapbox token
-        </div>
+      {engineName === "placeholder" && (
+        <div className={styles.placeholderBadge}>Placeholder terrain — synthetic elevation</div>
       )}
 
       {error && (
@@ -247,7 +299,7 @@ export default function RenderScene() {
       {/* Attribution sits outside every fading layer: it is a licensing
           requirement on EVERY frame (spec §2.2), not decoration. */}
       <div className={styles.attribution}>
-        {ATTRIBUTION.map((a) => (
+        {attributionFor(engineName).map((a) => (
           <span key={a}>{a}</span>
         ))}
       </div>
