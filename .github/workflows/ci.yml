@@ -62,7 +62,8 @@ jobs:
             echo "::error::Postgres integration tests were SKIPPED — the service container was unreachable."
             exit 1
           fi
-          for f in src/lib/jobs/queue.test.ts src/lib/db/db.test.ts; do
+          for f in src/lib/jobs/queue.test.ts src/lib/db/db.test.ts \
+                   src/app/api/render/render-route.test.ts; do
             line=$(grep -F "$f" test-output.log || true)
             if [ -z "$line" ]; then
               echo "::error::$f did not appear in the test output at all."
