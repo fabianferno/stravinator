@@ -1,0 +1,843 @@
+<title>Stravinator — UI Screens</title>
+
+<style>
+  /* ============================================================
+     Stravinator — nocturnal OLED direction
+     Single committed theme (dark), per the supplied reference.
+     Every color painted explicitly so the page holds on any host.
+     ============================================================ */
+  :root {
+    --ground:      #050505;
+    --raised:      #0E0E11;
+    --raised-2:    #16161B;
+    --line:        rgba(255,255,255,0.10);
+    --line-strong: rgba(255,255,255,0.18);
+    --text:        #FFFFFF;
+    --text-mid:    rgba(255,255,255,0.62);
+    --text-dim:    rgba(255,255,255,0.42);
+
+    --magenta:     #EE4FA6;
+    --plum:        #140512;
+    --blue:        #3F53C8;
+    --indigo:      #10143C;
+    --orange:      #FF6A2E;
+    --red:         #8E1620;
+    --lime:        #C8F135;
+
+    --grad-magenta: linear-gradient(176deg, #EE4FA6 0%, #C33A8E 26%, #7E2168 56%, #3D0F36 82%, #140512 100%);
+    --grad-blue:    linear-gradient(172deg, #4A5EDC 0%, #3143A8 32%, #1B2264 68%, #10143C 100%);
+    --grad-fire:    linear-gradient(172deg, #FF8A3D 0%, #FF6A2E 30%, #C4202E 68%, #5C0D14 100%);
+
+    --r-card: 32px;
+    --r-mid:  22px;
+    --r-sm:   14px;
+    --r-pill: 999px;
+
+    --ui: "Poppins", ui-rounded, -apple-system, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--ui);
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- page chrome ---------- */
+
+  .glow {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(60vw 60vw at 12% 8%,  rgba(99,102,241,0.16), transparent 62%),
+      radial-gradient(50vw 50vw at 88% 32%, rgba(238,79,166,0.13), transparent 60%),
+      radial-gradient(55vw 55vw at 50% 96%, rgba(63,83,200,0.12), transparent 62%);
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 72px 24px 96px;
+  }
+
+  .masthead { display: flex; flex-direction: column; gap: 18px; margin-bottom: 64px; }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .masthead h1 {
+    margin: 0;
+    font-size: clamp(38px, 6vw, 64px);
+    font-weight: 200;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+  .masthead h1 em { font-style: normal; color: var(--magenta); }
+
+  .lede {
+    margin: 0;
+    max-width: 62ch;
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--text-mid);
+  }
+
+  .screens {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 56px 40px;
+    align-items: start;
+  }
+
+  .slot { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  .slot-label { display: flex; align-items: baseline; gap: 10px; }
+  .slot-num {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .slot-name { font-size: 15px; font-weight: 400; color: var(--text); }
+  .slot-note { font-size: 13px; line-height: 1.55; color: var(--text-dim); max-width: 42ch; }
+
+  /* ---------- phone shell ---------- */
+
+  .phone {
+    width: min(390px, 100%);
+    min-height: 844px;
+    border-radius: 46px;
+    background: var(--ground);
+    border: 1px solid var(--line);
+    box-shadow: 0 40px 90px -30px rgba(0,0,0,0.9), 0 0 0 10px rgba(255,255,255,0.02);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- status + app bar ---------- */
+
+  .status {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px 4px;
+    flex-shrink: 0;
+  }
+  .status .time { font-size: 15px; font-weight: 500; letter-spacing: 0.01em; }
+  .status .indicators { display: flex; align-items: center; gap: 7px; }
+
+  .appbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 8px;
+    flex-shrink: 0;
+  }
+  .appbar h2 { margin: 0; font-size: 21px; font-weight: 400; letter-spacing: 0.005em; }
+
+  .circ {
+    width: 46px; height: 46px;
+    border-radius: var(--r-pill);
+    background: var(--raised-2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .circ.ghost { background: rgba(255,255,255,0.14); width: 34px; height: 34px; }
+  .circ.sm    { width: 40px; height: 40px; }
+
+  /* ---------- cards ---------- */
+
+  .body { display: flex; flex-direction: column; gap: 12px; padding: 10px 20px 26px; flex: 1; }
+
+  .card {
+    border-radius: var(--r-card);
+    background: var(--raised);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .card.magenta { background: var(--grad-magenta); }
+  .card.blue    { background: var(--grad-blue); }
+  .card.fire    { background: var(--grad-fire); }
+  .card.tall    { min-height: 386px; }
+
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .card-title { font-size: 15px; font-weight: 400; color: rgba(255,255,255,0.94); }
+
+  .readout { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 26px; }
+  .readout .unit { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.78); letter-spacing: 0.02em; }
+
+  .route-bed { position: absolute; left: 0; right: 0; bottom: 0; height: 190px; pointer-events: none; }
+  .route-bed svg { display: block; width: 100%; height: 100%; }
+
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .mini {
+    border-radius: var(--r-mid);
+    background: var(--raised);
+    padding: 16px;
+    min-height: 132px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .mini.blue { background: var(--grad-blue); }
+  .mini-label { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.88); }
+  .mini-value { display: flex; align-items: baseline; gap: 6px; }
+  .mini-value .n { font-size: 30px; font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .mini-value .u { font-size: 12px; font-weight: 300; color: var(--text-mid); }
+  .mini.blue .mini-value .u { color: rgba(255,255,255,0.72); }
+
+  /* ---------- controls ---------- */
+
+  .dock { display: flex; flex-direction: column; gap: 10px; padding: 10px 20px 28px; flex-shrink: 0; }
+
+  .field {
+    height: 54px;
+    border-radius: var(--r-pill);
+    background: var(--raised);
+    border: 1px solid var(--line);
+    display: flex; align-items: center;
+    padding: 0 22px;
+    font-size: 14px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .btn {
+    height: 56px;
+    border-radius: var(--r-pill);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 400;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: var(--raised-2);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .btn.primary { background: var(--lime); color: #10130A; font-weight: 500; }
+  .btn.quiet   { background: transparent; border-color: var(--line-strong); color: var(--text); }
+  .btn.sm      { height: 48px; font-size: 14px; }
+  .btn:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dock-note { font-size: 11px; color: var(--text-dim); text-align: center; line-height: 1.5; }
+
+  /* ---------- list rows ---------- */
+
+  .rows { display: flex; flex-direction: column; gap: 10px; }
+
+  .row {
+    display: flex; align-items: center; gap: 14px;
+    border-radius: var(--r-mid);
+    background: var(--raised);
+    padding: 14px 16px;
+  }
+  .row.featured { background: var(--grad-magenta); }
+  .row.off { background: rgba(255,255,255,0.03); }
+
+  .thumb {
+    width: 50px; height: 50px; flex-shrink: 0;
+    border-radius: var(--r-sm);
+    background: rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .row.featured .thumb { background: rgba(255,255,255,0.18); }
+
+  .row-text { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+  .row-name { font-size: 16px; font-weight: 400; letter-spacing: -0.005em; }
+  .row-meta { font-size: 12.5px; font-weight: 300; color: var(--text-mid); font-variant-numeric: tabular-nums; }
+  .row.featured .row-meta { color: rgba(255,255,255,0.82); }
+  .row.off .row-name { color: var(--text-mid); }
+  .row.off .row-meta { color: var(--orange); }
+
+  .chev { width: 18px; flex-shrink: 0; display: flex; justify-content: flex-end; }
+
+  .section-head { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 4px; }
+  .step {
+    font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim);
+  }
+  .section-head h3 { margin: 0; font-size: 27px; font-weight: 200; letter-spacing: -0.02em; }
+
+  /* ---------- render stages ---------- */
+
+  .stages { display: flex; flex-direction: column; }
+
+  .stage {
+    display: flex; align-items: center; gap: 13px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .stage:last-child { border-bottom: 0; }
+  .stage-name { flex: 1; font-size: 15px; font-weight: 300; }
+  .stage-val {
+    width: 82px; flex-shrink: 0; text-align: right;
+    font-size: 13px; font-weight: 300; color: var(--text-mid);
+    font-variant-numeric: tabular-nums;
+  }
+  .stage.done .stage-name { color: var(--text); }
+  .stage.now  .stage-name { font-weight: 400; }
+  .stage.now  .stage-val  { color: var(--text); }
+  .stage.todo .stage-name,
+  .stage.todo .stage-val  { color: var(--text-dim); }
+
+  .dot {
+    width: 22px; height: 22px; flex-shrink: 0;
+    border-radius: var(--r-pill);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dot.done { background: var(--lime); }
+  .dot.now  { border: 3px solid var(--lime); }
+  .dot.todo { border: 1px solid var(--line-strong); }
+
+  .track { height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.09); overflow: hidden; }
+  .track > i { display: block; height: 100%; background: var(--lime); border-radius: var(--r-pill); }
+  .stage-wide { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+
+  /* ---------- HUD (the actual video output) ---------- */
+
+  .player {
+    position: relative;
+    border-radius: var(--r-card);
+    overflow: hidden;
+    background: #0B120D;
+    min-height: 452px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 20px;
+  }
+  .terrain { position: absolute; inset: 0; }
+  .terrain svg { display: block; width: 100%; height: 100%; }
+  .scrim {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 210px;
+    background: linear-gradient(to bottom, rgba(6,10,7,0) 0%, rgba(6,10,7,0.76) 44%, rgba(6,10,7,0.96) 100%);
+  }
+  .hud { position: relative; display: flex; flex-direction: column; gap: 10px; }
+  .hud-date {
+    font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,0.72);
+  }
+  .hud-stats { display: flex; align-items: flex-end; gap: 24px; }
+  .hud-stat { display: flex; flex-direction: column; gap: 2px; }
+  .hud-stat .n { font-size: 30px; font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .hud-stat .l {
+    font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+  }
+  .attrib { font-size: 9px; letter-spacing: 0.06em; color: rgba(255,255,255,0.46); }
+
+  /* ---------- error blocks ---------- */
+
+  .err { border-radius: var(--r-card); padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .err.neutral { background: var(--raised); }
+  .err.hot { background: var(--grad-fire); }
+  .err-kind {
+    font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--orange);
+  }
+  .err.hot .err-kind { color: rgba(255,255,255,0.9); }
+  .err h4 { margin: 0; font-size: 22px; font-weight: 300; letter-spacing: -0.015em; line-height: 1.2; }
+  .err p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--text-mid); }
+  .err.hot p { color: rgba(255,255,255,0.86); }
+  .err .btn { margin-top: 6px; }
+  .err.hot .btn.quiet { border-color: rgba(255,255,255,0.5); }
+
+  /* ---------- dot-matrix canvas ---------- */
+
+  .matrix { display: block; width: 100%; height: 88px; }
+  .matrix.mid { height: 62px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="glow"></div>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="eyebrow">Stravinator · mobile UI · v2 nocturnal</span>
+    <h1>Six screens, from invite<br>to <em>posted flyover</em>.</h1>
+    <p class="lede">
+      The full path a runner walks: connect Strava, pick a run, watch it render, save the video.
+      Built to the supplied reference — OLED black, oversized gradient cards, dot-matrix numerals,
+      one lime accent. The numerals are rendered by sampling real glyphs onto a dot grid, so they
+      behave like type rather than an image.
+    </p>
+  </header>
+
+  <div class="screens">
+
+    <!-- ================= 01 LANDING ================= -->
+    <section class="slot">
+      <div class="slot-label"><span class="slot-num">01</span><span class="slot-name">Landing &amp; invite</span></div>
+      <div class="phone">
+        <div class="status">
+          <span class="time">9:41</span>
+          <span class="indicators">
+            <svg width="17" height="11" viewBox="0 0 17 11" fill="none" aria-hidden="true"><rect y="7" width="3" height="4" rx="1" fill="#fff"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#fff"/><rect x="9" y="2.5" width="3" height="8.5" rx="1" fill="#fff"/><rect x="13.5" width="3" height="11" rx="1" fill="#fff"/></svg>
+            <svg width="15" height="11" viewBox="0 0 15 11" fill="none" aria-hidden="true"><path d="M1 3.6C4.6.6 10.4.6 14 3.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M3.6 6.4c2.2-1.8 5.6-1.8 7.8 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="7.5" cy="9.3" r="1.3" fill="#fff"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true"><rect x=".6" y=".6" width="21" height="10.8" rx="3.2" stroke="#fff" stroke-opacity=".5" stroke-width="1.2"/><rect x="2.4" y="2.4" width="17.4" height="7.2" rx="2" fill="#fff"/><path d="M23.2 4.2v3.6" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="appbar">
+          <span class="circ" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="8.5" r="6.4" stroke="#fff" stroke-width="1.5"/><path d="M8.5 4.4v4.1l2.7 1.7" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+          <h2>Stravinator</h2>
+          <span class="circ" aria-hidden="true">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="none"><path d="M1 1.2h16M1 6h16M1 10.8h11" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="card magenta tall">
+            <div class="card-top">
+              <span class="card-title">Last flyover</span>
+              <span class="circ ghost" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5v10M1.5 6.5h10" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
+            </div>
+            <div class="readout">
+              <canvas class="matrix" data-text="14.2" aria-label="14.2 kilometres"></canvas>
+              <span class="unit">Kilometres</span>
+            </div>
+            <div class="route-bed" aria-hidden="true">
+              <svg viewBox="0 0 350 190" fill="none" preserveAspectRatio="xMidYMax meet">
+                <path d="M40 178C10 132 96 118 74 78 56 44 128 34 152 8" stroke="rgba(255,255,255,.26)" stroke-width="12" stroke-linecap="round"/>
+                <path d="M40 178C10 132 96 118 74 78 56 44 128 34 152 8" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="74" cy="78" r="6" fill="#C8F135"/>
+                <path d="M206 170c18-20 48-16 62-36" stroke="rgba(255,255,255,.22)" stroke-width="2" stroke-dasharray="3 6" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="duo">
+            <div class="mini">
+              <span class="mini-label">Runs flown</span>
+              <span class="mini-value"><span class="n">12</span><span class="u">this year</span></span>
+            </div>
+            <div class="mini blue">
+              <span class="mini-label">Climbed</span>
+              <span class="mini-value"><span class="n">4,180</span><span class="u">m</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dock">
+          <div class="field">Invite code</div>
+          <a class="btn primary" href="#01" role="button">Connect Strava</a>
+          <p class="dock-note">Powered by Strava · Invite-only beta</p>
+        </div>
+      </div>
+      <p class="slot-note">Hero card carries the last run so a returning athlete sees their own data first, not marketing.</p>
+    </section>
+
+    <!-- ================= 02 ACTIVITY LIST ================= -->
+    <section class="slot">
+      <div class="slot-label"><span class="slot-num">02</span><span class="slot-name">Pick a run</span></div>
+      <div class="phone">
+        <div class="status">
+          <span class="time">9:41</span>
+          <span class="indicators">
+            <svg width="17" height="11" viewBox="0 0 17 11" fill="none" aria-hidden="true"><rect y="7" width="3" height="4" rx="1" fill="#fff"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#fff"/><rect x="9" y="2.5" width="3" height="8.5" rx="1" fill="#fff"/><rect x="13.5" width="3" height="11" rx="1" fill="#fff"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true"><rect x=".6" y=".6" width="21" height="10.8" rx="3.2" stroke="#fff" stroke-opacity=".5" stroke-width="1.2"/><rect x="2.4" y="2.4" width="17.4" height="7.2" rx="2" fill="#fff"/><path d="M23.2 4.2v3.6" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="appbar">
+          <span class="circ" aria-hidden="true">
+            <svg width="10" height="17" viewBox="0 0 10 17" fill="none"><path d="M8 1.5 2 8.5l6 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <h2>Your runs</h2>
+          <span class="circ" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="#fff" stroke-width="1.5"/><path d="m11 11 3.2 3.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="section-head">
+            <span class="step">Step 1 of 2</span>
+            <h3>Pick a run to fly.</h3>
+          </div>
+
+          <div class="rows">
+            <div class="row featured">
+              <span class="thumb" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M8 24c-4-6 9-5 5-11-3-5 8-3 8-7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span class="row-text">
+                <span class="row-name">Morning Run</span>
+                <span class="row-meta">Sat 2 Aug · 14.2 km · 312 m</span>
+              </span>
+              <span class="chev" aria-hidden="true">
+                <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M1.5 1.5 7 7.5l-5.5 6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+
+            <div class="row">
+              <span class="thumb" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M22 24c4-7-10-6-6-12 3-4-6-4-7-8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span class="row-text">
+                <span class="row-name">Sunday Long Run</span>
+                <span class="row-meta">Sun 27 Jul · 26.8 km · 684 m</span>
+              </span>
+              <span class="chev" aria-hidden="true">
+                <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M1.5 1.5 7 7.5l-5.5 6" stroke="rgba(255,255,255,.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+
+            <div class="row">
+              <span class="thumb" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M6 20c6-2 5-11 11-9 4 1 3 8 7 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span class="row-text">
+                <span class="row-name">Evening Shakeout</span>
+                <span class="row-meta">Thu 24 Jul · 6.1 km · 48 m</span>
+              </span>
+              <span class="chev" aria-hidden="true">
+                <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M1.5 1.5 7 7.5l-5.5 6" stroke="rgba(255,255,255,.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+
+            <div class="row">
+              <span class="thumb" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M7 8c3 6 11 2 9 8-1 4-8 3-9 8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span class="row-text">
+                <span class="row-name">Trail Recce</span>
+                <span class="row-meta">Tue 22 Jul · 11.4 km · 505 m</span>
+              </span>
+              <span class="chev" aria-hidden="true">
+                <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M1.5 1.5 7 7.5l-5.5 6" stroke="rgba(255,255,255,.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+
+            <div class="row off">
+              <span class="thumb" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M8 24c-4-6 9-5 5-11-3-5 8-3 8-7" stroke="rgba(255,255,255,.22)" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span class="row-text">
+                <span class="row-name">Treadmill Intervals</span>
+                <span class="row-meta">Wed 23 Jul · No GPS recorded</span>
+              </span>
+              <span class="chev" aria-hidden="true"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="slot-note">Indoor runs stay visible but inert, with the reason attached — hiding them reads as a bug to the athlete.</p>
+    </section>
+
+    <!-- ================= 03 CONFIRM ================= -->
+    <section class="slot">
+      <div class="slot-label"><span class="slot-num">03</span><span class="slot-name">Confirm</span></div>
+      <div class="phone">
+        <div class="status">
+          <span class="time">9:41</span>
+          <span class="indicators">
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true"><rect x=".6" y=".6" width="21" height="10.8" rx="3.2" stroke="#fff" stroke-opacity=".5" stroke-width="1.2"/><rect x="2.4" y="2.4" width="17.4" height="7.2" rx="2" fill="#fff"/><path d="M23.2 4.2v3.6" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="appbar">
+          <span class="circ" aria-hidden="true">
+            <svg width="10" height="17" viewBox="0 0 10 17" fill="none"><path d="M8 1.5 2 8.5l6 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <h2>Morning Run</h2>
+          <span class="circ sm" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.4" stroke="#fff" stroke-width="1.4"/><path d="M8 5v3.4M8 11h.01" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="card blue tall">
+            <div class="card-top">
+              <span class="card-title">Route preview</span>
+              <span class="card-title" style="color:rgba(255,255,255,.7); font-size:12px;">Step 2 of 2</span>
+            </div>
+            <div class="readout">
+              <canvas class="matrix" data-text="4:52" aria-label="4 minutes 52 seconds per kilometre"></canvas>
+              <span class="unit">Average pace / km</span>
+            </div>
+            <div class="route-bed" aria-hidden="true">
+              <svg viewBox="0 0 350 190" fill="none" preserveAspectRatio="xMidYMax meet">
+                <path d="M52 180C22 140 104 126 84 88 66 54 150 44 176 14" stroke="rgba(255,255,255,.24)" stroke-width="12" stroke-linecap="round"/>
+                <path d="M52 180C22 140 104 126 84 88 66 54 150 44 176 14" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="52" cy="180" r="6" fill="#fff"/>
+                <circle cx="176" cy="14" r="6" fill="#C8F135"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="duo">
+            <div class="mini">
+              <span class="mini-label">Distance</span>
+              <span class="mini-value"><span class="n">14.2</span><span class="u">km</span></span>
+            </div>
+            <div class="mini">
+              <span class="mini-label">Elevation</span>
+              <span class="mini-value"><span class="n">312</span><span class="u">m</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dock">
+          <p class="dock-note">32-second vertical video, 1080 × 1920. Ready in about two minutes.</p>
+          <a class="btn primary" href="#03" role="button">Create flyover</a>
+        </div>
+      </div>
+      <p class="slot-note">Pace gets the hero slot here — it's the number runners actually brag about.</p>
+    </section>
+
+    <!-- ================= 04 RENDERING ================= -->
+    <section class="slot">
+      <div class="slot-label"><span class="slot-num">04</span><span class="slot-name">Rendering</span></div>
+      <div class="phone">
+        <div class="status">
+          <span class="time">9:41</span>
+          <span class="indicators">
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true"><rect x=".6" y=".6" width="21" height="10.8" rx="3.2" stroke="#fff" stroke-opacity=".5" stroke-width="1.2"/><rect x="2.4" y="2.4" width="17.4" height="7.2" rx="2" fill="#fff"/><path d="M23.2 4.2v3.6" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="appbar">
+          <span class="circ" aria-hidden="true">
+            <svg width="10" height="17" viewBox="0 0 10 17" fill="none"><path d="M8 1.5 2 8.5l6 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <h2>Flying your route</h2>
+          <span class="circ sm" aria-hidden="true"></span>
+        </div>
+
+        <div class="body">
+          <div class="card magenta" style="min-height:250px; align-items:center; justify-content:center;">
+            <div class="readout" style="margin-top:0;">
+              <canvas class="matrix" data-text="64%" aria-label="64 percent complete"></canvas>
+              <span class="unit">Frame 614 of 960</span>
+            </div>
+          </div>
+
+          <div class="card" style="padding:6px 20px;">
+            <div class="stages">
+              <div class="stage done">
+                <span class="dot done" aria-hidden="true">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="m2.5 6.2 2.5 2.4 4.5-5" stroke="#10130A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <span class="stage-name">Fetched from Strava</span>
+                <span class="stage-val">3s</span>
+              </div>
+              <div class="stage done">
+                <span class="dot done" aria-hidden="true">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="m2.5 6.2 2.5 2.4 4.5-5" stroke="#10130A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <span class="stage-name">Smoothed 2,481 points</span>
+                <span class="stage-val">1s</span>
+              </div>
+              <div class="stage-wide">
+                <div style="display:flex; align-items:center; gap:13px;">
+                  <span class="dot now" aria-hidden="true"></span>
+                  <span class="stage-name" style="font-weight:400;">Rendering frames</span>
+                  <span class="stage-val" style="color:#fff;">614 / 960</span>
+                </div>
+                <div class="track" style="margin-left:35px;"><i style="width:64%;"></i></div>
+              </div>
+              <div class="stage todo">
+                <span class="dot todo" aria-hidden="true"></span>
+                <span class="stage-name">Encoding video</span>
+                <span class="stage-val">Waiting</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dock">
+          <p class="dock-note">Leave this screen if you like — we keep rendering and notify you when it's ready.</p>
+          <a class="btn quiet" href="#04" role="button">Cancel render</a>
+        </div>
+      </div>
+      <p class="slot-note">Progress is tied to real frame counts, so the bar can't lie about how far along it is.</p>
+    </section>
+
+    <!-- ================= 05 RESULT ================= -->
+    <section class="slot">
+      <div class="slot-label"><span class="slot-num">05</span><span class="slot-name">Result</span></div>
+      <div class="phone">
+        <div class="status">
+          <span class="time">9:41</span>
+          <span class="indicators">
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true"><rect x=".6" y=".6" width="21" height="10.8" rx="3.2" stroke="#fff" stroke-opacity=".5" stroke-width="1.2"/><rect x="2.4" y="2.4" width="17.4" height="7.2" rx="2" fill="#fff"/><path d="M23.2 4.2v3.6" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="appbar">
+          <span class="circ" aria-hidden="true">
+            <svg width="10" height="17" viewBox="0 0 10 17" fill="none"><path d="M8 1.5 2 8.5l6 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <h2>That's your run</h2>
+          <span class="circ sm" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 10V2m0 0L4.6 4.9M7.5 2l2.9 2.9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10v2.5h11V10" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="player">
+            <div class="terrain" aria-hidden="true">
+              <svg viewBox="0 0 350 452" fill="none" preserveAspectRatio="none">
+                <rect width="350" height="452" fill="#0B120D"/>
+                <path d="M-10 352 60 334l80 12 76-30 74 12 80-24v170H-10z" fill="#26362B"/>
+                <path d="M-10 268 70 234l64 20 82-44 74 20 80-28v150H-10z" fill="#1F2D24"/>
+                <path d="M-10 190 86 158l86 20 84-38 114 22v116H-10z" fill="#19241E"/>
+                <path d="M150 430c-40-52 62-80 24-132-32-44-96-52-76-96 16-38 96-42 108-80" stroke="#C8F135" stroke-width="5" stroke-linecap="round"/>
+                <circle cx="174" cy="298" r="8" fill="#fff"/>
+              </svg>
+            </div>
+            <div class="scrim" aria-hidden="true"></div>
+            <div class="hud">
+              <span class="hud-date">Sat 2 Aug · Morning Run</span>
+              <div class="hud-stats">
+                <span class="hud-stat"><span class="n">14.2</span><span class="l">km</span></span>
+                <span class="hud-stat"><span class="n">4:52</span><span class="l">pace</span></span>
+                <span class="hud-stat"><span class="n">312</span><span class="l">m gain</span></span>
+              </div>
+              <span class="attrib">Powered by Strava · © Mapbox © OpenStreetMap</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dock">
+          <a class="btn primary" href="#05" role="button">Save video</a>
+          <div class="btn-row">
+            <a class="btn quiet sm" href="#05" role="button">Share link</a>
+            <a class="btn sm" href="#05" role="button">Make another</a>
+          </div>
+          <p class="dock-note">Rendered in 1 min 52 s · link stays live 30 days</p>
+        </div>
+      </div>
+      <p class="slot-note">The video's own HUD is designed here too — it's the thing that actually gets posted.</p>
+    </section>
+
+    <!-- ================= 06 ERRORS ================= -->
+    <section class="slot">
+      <div class="slot-label"><span class="slot-num">06</span><span class="slot-name">Failure states</span></div>
+      <div class="phone">
+        <div class="status">
+          <span class="time">9:41</span>
+          <span class="indicators">
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true"><rect x=".6" y=".6" width="21" height="10.8" rx="3.2" stroke="#fff" stroke-opacity=".5" stroke-width="1.2"/><rect x="2.4" y="2.4" width="17.4" height="7.2" rx="2" fill="#fff"/><path d="M23.2 4.2v3.6" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="appbar">
+          <span class="circ" aria-hidden="true">
+            <svg width="10" height="17" viewBox="0 0 10 17" fill="none"><path d="M8 1.5 2 8.5l6 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <h2>Something stopped</h2>
+          <span class="circ sm" aria-hidden="true"></span>
+        </div>
+
+        <div class="body">
+          <div class="err neutral">
+            <span class="err-kind">No route data</span>
+            <h4>This run has no GPS track.</h4>
+            <p>Treadmill and indoor activities record distance but not position, so there's no route to fly. Pick an outdoor run instead.</p>
+            <a class="btn quiet sm" href="#06" role="button">Back to your runs</a>
+          </div>
+
+          <div class="err hot">
+            <span class="err-kind">Render failed</span>
+            <h4>We couldn't finish this flyover.</h4>
+            <p>The map tiles stopped responding partway through, so we stopped rather than hand you a video with holes in it. Try again — if it fails twice, tell us.</p>
+            <a class="btn quiet sm" href="#06" role="button">Try again</a>
+          </div>
+
+          <div class="err neutral">
+            <span class="err-kind">Session expired</span>
+            <h4>Strava signed you out.</h4>
+            <p>Connections expire every six hours. Reconnect and we'll take you straight back to Morning Run.</p>
+            <a class="btn primary sm" href="#06" role="button">Reconnect Strava</a>
+          </div>
+        </div>
+      </div>
+      <p class="slot-note">Only the recoverable failure gets the hot gradient; the other two stay quiet so the colour still means something.</p>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  /* Dot-matrix numerals: rasterise a real glyph, resample onto a dot grid.
+     Keeps the reference's LED look while behaving like type. */
+  (function () {
+    function render(canvas) {
+      var text  = canvas.dataset.text || "";
+      var dpr   = window.devicePixelRatio || 1;
+      var rect  = canvas.getBoundingClientRect();
+      var w     = Math.max(1, Math.round(rect.width));
+      var h     = Math.max(1, Math.round(rect.height));
+      if (!w || !h) return;
+
+      canvas.width  = w * dpr;
+      canvas.height = h * dpr;
+      var ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      /* offscreen: draw the glyphs solid */
+      var off = document.createElement("canvas");
+      off.width = w; off.height = h;
+      var octx = off.getContext("2d");
+      var size = Math.round(h * 0.92);
+      octx.font = "600 " + size + "px " + getComputedStyle(canvas).fontFamily;
+      octx.textAlign = "center";
+      octx.textBaseline = "middle";
+      octx.fillStyle = "#fff";
+      octx.fillText(text, w / 2, h / 2 + size * 0.02);
+
+      var data = octx.getImageData(0, 0, w, h).data;
+
+      /* resample onto a dot grid */
+      var step = Math.max(4, Math.round(h / 16));
+      var r    = step * 0.30;
+      ctx.fillStyle = "#fff";
+      for (var y = step / 2; y < h; y += step) {
+        for (var x = step / 2; x < w; x += step) {
+          var i = ((Math.round(y) * w) + Math.round(x)) * 4;
+          if (data[i + 3] > 128) {
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    function renderAll() {
+      document.querySelectorAll("canvas.matrix").forEach(render);
+    }
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(renderAll);
+    }
+    renderAll();
+    window.addEventListener("resize", renderAll);
+  })();
+</script>

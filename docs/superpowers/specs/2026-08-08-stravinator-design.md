@@ -172,12 +172,39 @@ issuance.
 
 ## 8. Screens
 
-1. **Landing / invite gate** — what it does, one looping hero video, invite-code entry, "Connect with Strava"
-2. **Activity list** — recent activities with mini route thumbnails, distance, date; GPS-less ones visibly disabled
-3. **Activity detail / confirm** — static route preview, stats, "Create flyover", estimated wait
+**Mobile-first.** All screens are designed at 390 × 844 and scale up to desktop. The output is a
+vertical video destined for a phone, and the athlete is most likely holding one when they use this.
+Desktop is a widened version of the mobile layout, not a separate design.
+
+1. **Landing / invite gate** — hero card showing the athlete's last flyover, invite-code entry,
+   "Connect Strava"
+2. **Activity list** — recent activities as rows; GPS-less ones visibly inert with the reason attached
+3. **Activity detail / confirm** — route preview card, stats, "Create flyover", estimated wait
 4. **Render in progress** — real staged progress (fetching / smoothing / rendering frames / encoding)
-5. **Result** — video player, download, share, "make another"
-6. **Error states** — no GPS data, render failed, token expired
+5. **Result** — video player, save, share, "make another"
+6. **Error states** — no GPS data, render failed, session expired
+
+### 8.1 Visual direction
+
+Committed dark theme ("nocturnal"): OLED black ground, oversized gradient cards at 32px radius,
+dot-matrix numerals for hero figures, light-weight geometric UI type, a single lime accent reserved
+for primary actions.
+
+| Token | Value | Role |
+|---|---|---|
+| `--ground` | `#050505` | page ground |
+| `--raised` | `#0E0E11` | card surface |
+| `--text` / `--text-mid` / `--text-dim` | `#FFFFFF` / `rgba(255,255,255,.62)` / `rgba(255,255,255,.42)` | type |
+| `--grad-magenta` | `#EE4FA6 → #140512` | primary hero card |
+| `--grad-blue` | `#4A5EDC → #10143C` | secondary card |
+| `--grad-fire` | `#FF8A3D → #5C0D14` | recoverable failure only |
+| `--lime` | `#C8F135` | primary action, active progress |
+
+Semantic color stays separate from decoration: only the recoverable failure state uses the fire
+gradient, so the color retains meaning.
+
+Approved reference implementation of all six screens (static HTML, canvas-rendered dot-matrix
+numerals): `docs/superpowers/design/stravinator-ui.html`.
 
 ## 9. Testing
 
