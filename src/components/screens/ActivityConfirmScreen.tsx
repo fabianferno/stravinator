@@ -1,7 +1,7 @@
 import type { ActivitySummary } from "@/lib/types";
 import { AppBar } from "@/components/AppBar";
 import { Attribution } from "@/components/Attribution";
-import { ButtonLink } from "@/components/Button";
+import { Button, ButtonLink } from "@/components/Button";
 import {
   Card,
   CardMeta,
@@ -20,8 +20,14 @@ import { OUTPUT } from "@/lib/types";
 
 export interface ActivityConfirmScreenProps {
   activity: ActivitySummary;
-  /** Route that starts the render. Wire to the job-create action. */
+  /** Fallback link, used only when `createAction` is absent (mocks, previews). */
   createHref: string;
+  /**
+   * Server action that queues the render. Preferred over `createHref`: creating
+   * a job is a side effect, so it belongs behind a POST, not a link a browser
+   * or crawler might prefetch.
+   */
+  createAction?: (formData: FormData) => Promise<void>;
   backHref?: string;
   /** Seconds of finished video; defaults to the midpoint of the output contract. */
   estimatedDurationSec?: number;
@@ -32,6 +38,7 @@ export interface ActivityConfirmScreenProps {
 export function ActivityConfirmScreen({
   activity,
   createHref,
+  createAction,
   backHref = "/activities",
   estimatedDurationSec = 32,
   estimatedWait = "about two minutes",
@@ -78,9 +85,18 @@ export function ActivityConfirmScreen({
           {estimatedDurationSec}-second vertical video, {OUTPUT.width} × {OUTPUT.height}. Ready in{" "}
           {estimatedWait}.
         </p>
-        <ButtonLink href={createHref} variant="primary">
-          Create flyover
-        </ButtonLink>
+        {createAction ? (
+          <form action={createAction}>
+            <input type="hidden" name="activityId" value={activity.id} />
+            <Button type="submit" variant="primary">
+              Create flyover
+            </Button>
+          </form>
+        ) : (
+          <ButtonLink href={createHref} variant="primary">
+            Create flyover
+          </ButtonLink>
+        )}
         <Attribution className="attrib-note" />
       </div>
     </div>
