@@ -32,6 +32,16 @@ export interface CaptureOptions {
   timeoutMs?: number;
   /** Retries for a single frame before the job is failed. */
   frameRetries?: number;
+  /**
+   * Cap the frames captured. Smoke tests only — a real job must encode every
+   * frame or the video ends early.
+   */
+  maxFrames?: number;
+  /**
+   * Permit capturing the no-token placeholder terrain. Smoke tests only; never
+   * set this for a job whose output an athlete will see.
+   */
+  allowPlaceholder?: boolean;
 }
 
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
@@ -47,6 +57,8 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
     onProgress,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     frameRetries = DEFAULT_FRAME_RETRIES,
+    maxFrames,
+    allowPlaceholder = false,
   } = opts;
 
   const deadline = Date.now() + timeoutMs;
@@ -54,6 +66,9 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
 
   try {
     browser = await chromium.launch({
+      // Full Chromium, not the headless shell: the shell's WebGL support is
+      // too limited to render Mapbox terrain.
+      channel: "chromium",
       args: [
         // Persist Mapbox tiles across frames and across renders. Tiles bill per
         // request, so this is a cost control, not just a speed one.
@@ -78,7 +93,18 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
     page.on("pageerror", (e) => pageErrors.push(e.message));
 
     await page.goto(url, { waitUntil: "load", timeout: 120_000 });
-    await page.evaluate(() => window.sceneReady);
+
+    // Wait for the flag the page sets, not for `window.sceneReady` directly:
+    // evaluating a promise that does not exist yet resolves to undefined
+    // immediately, which looks like success and yields a blank video.
+    await page.waitForFunction(
+      () => document.body.dataset.sceneReady === "1" || !!document.body.dataset.sceneError,
+      undefined,
+      { timeout: 120_000 },
+    );
+
+    const sceneError = await page.evaluate(() => document.body.dataset.sceneError);
+    if (sceneError) throw new Error(`Render page failed to start: ${sceneError}`);
 
     const frameCount = await page.evaluate(() => window.frameCount);
     if (!Number.isInteger(frameCount) || frameCount <= 0) {
@@ -89,25 +115,26 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
     // token is configured. That is fine for development and must never reach
     // an athlete as a finished video.
     const real = await page.evaluate(() => window.sceneInfo?.real !== false);
-    if (!real) {
+    if (!real && !allowPlaceholder) {
       throw new Error(
         "Render page is using placeholder terrain — NEXT_PUBLIC_MAPBOX_TOKEN is not configured.",
       );
     }
 
+    const total = maxFrames ? Math.min(maxFrames, frameCount) : frameCount;
     const ffmpeg = startEncoder(outPath);
 
-    for (let i = 0; i < frameCount; i++) {
+    for (let i = 0; i < total; i++) {
       if (Date.now() > deadline) {
         ffmpeg.kill();
         throw new Error(
-          `Render exceeded its time budget at frame ${i} of ${frameCount}. No partial video delivered.`,
+          `Render exceeded its time budget at frame ${i} of ${total}. No partial video delivered.`,
         );
       }
 
       const png = await grabFrame(page, i, frameRetries, pageErrors);
       await writeFrame(ffmpeg.stdin, png);
-      await onProgress?.(i + 1, frameCount);
+      await onProgress?.(i + 1, total);
     }
 
     return await finishEncoder(ffmpeg, outPath);
