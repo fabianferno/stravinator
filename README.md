@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stravinator
 
-## Getting Started
+Turns a Strava activity into a cinematic 3D flyover video, ready to post to Instagram Reels or
+Stories. Connect Strava, pick one of your own runs, get back a 1080×1920 MP4 of a camera flying the
+route over 3D terrain with a data HUD.
 
-First, run the development server:
+Invite-only beta. One preset, zero knobs.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Spec:** `docs/superpowers/specs/2026-08-08-stravinator-design.md`
+- **Plan:** `docs/superpowers/plans/2026-08-08-stravinator-build.md`
+- **Approved design:** `docs/superpowers/design/stravinator-ui.html`
+
+## How it fits together
+
+A Next.js app handles everything the athlete touches. A separate long-running worker does the
+rendering, because headless Chromium and ffmpeg cannot run in a serverless function. They
+communicate through a Postgres job queue.
+
+```
+Next.js                          Worker
+├─ Strava OAuth (own data only)  ├─ claims a job (FOR UPDATE SKIP LOCKED)
+├─ Activity picker               ├─ fetches track, smooths it into a camera path
+├─ Job submit → queue            ├─ steps /render frame by frame (Playwright)
+└─ Status poll → download        └─ pipes PNGs to ffmpeg → MP4
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Module | Responsibility |
+|---|---|
+| `src/lib/track/` | The smoothing engine. Pure, zero I/O. Turns noisy GPS into a camera that doesn't jitter. This is the core IP. |
+| `src/lib/strava/` | OAuth, token refresh, activity and stream fetch. Fixture-tested; no network in tests. |
+| `src/lib/jobs/` | Queue: claim, lease, heartbeat, capped retries, status transitions. |
+| `src/app/render/` | The scene the worker screenshots. Driven by frame index, never wall-clock, so renders are reproducible. |
+| `worker/` | Frame-stepper and encoder. Knows nothing about running, maps, or Strava. |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Running it
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npx playwright install chromium
+cp .env.example .env.local     # then fill it in
 
-## Learn More
+# Postgres (any instance works; this is the quickest)
+docker run -d --name stravinator-pg -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=stravinator -p 55432:5432 postgres:16-alpine
+DATABASE_URL=postgres://postgres:postgres@localhost:55432/stravinator npm run migrate
 
-To learn more about Next.js, take a look at the following resources:
+npm run dev      # app on :3000
+npm run worker   # render worker, in a second terminal
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`INVITE_CODES` is a comma-separated list; without it, nobody can sign in.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Testing
 
-## Deploy on Vercel
+```bash
+npm test                                  # unit + queue integration
+npx tsx worker/smoke.ts 60                # end-to-end: real page → real ffmpeg → playable MP4
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The queue tests need Postgres and skip with a printed message if none is reachable. The smoke test
+needs a dev server running.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Known gaps
+
+- **No Mapbox token yet.** `/render` falls back to wireframe placeholder terrain behind a loud
+  banner, and `captureVideo` refuses to encode it unless explicitly told to. Terrain, sky, and the
+  real tile-settling timing are unverified until a token exists.
+- **Strava fixtures are synthetic**, plausible but not recorded from a live account. Several API
+  behaviours are assumed rather than observed — see the notes in `src/lib/strava/`.
+- **Videos are served from the worker's local disk**, so the app and worker must share a filesystem.
+  Moving to object storage means changing `publish()` in `worker/index.ts` and one route.
+- The camera lags slightly through tight switchbacks, and GPS dropouts are bridged with a straight
+  line. Both are documented in `src/lib/track/`.
