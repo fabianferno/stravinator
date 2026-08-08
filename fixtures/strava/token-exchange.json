@@ -1,0 +1,24 @@
+{
+  "token_type": "Bearer",
+  "expires_at": 1784044800,
+  "expires_in": 21600,
+  "refresh_token": "f1c3b0a9e7d5c3b1a9f7e5d3c1b9a7f5e3d1c9b7",
+  "access_token": "a0b1c2d3e4f5061728394a5b6c7d8e9f0a1b2c3d",
+  "athlete": {
+    "id": 2284799,
+    "username": "stravinator_beta",
+    "resource_state": 2,
+    "firstname": "Dana",
+    "lastname": "Okonkwo",
+    "city": "San Francisco",
+    "state": "CA",
+    "country": "United States",
+    "sex": "F",
+    "premium": true,
+    "summit": true,
+    "created_at": "2019-03-02T18:44:11Z",
+    "updated_at": "2026-07-18T09:12:33Z",
+    "profile_medium": "https://example.invalid/medium.jpg",
+    "profile": "https://example.invalid/large.jpg"
+  }
+}
