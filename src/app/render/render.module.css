@@ -1,0 +1,229 @@
+/* Render scene styling — the nocturnal OLED direction from spec §8.1, laid out
+   for a fixed 1080x1920 surface. Nothing here is responsive on purpose: this
+   surface is a video frame, not a page. */
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  background: #050505;
+  color: #ffffff;
+  font-family: var(--font-geist-sans), ui-rounded, system-ui, sans-serif;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+/* Keeps the HUD legible over bright snow and pale satellite imagery. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(5, 5, 5, 0.82) 0%, rgba(5, 5, 5, 0) 26%),
+    linear-gradient(0deg, rgba(5, 5, 5, 0.88) 0%, rgba(5, 5, 5, 0) 34%);
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  padding: 88px 72px 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.eyebrow {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.name {
+  margin: 0;
+  font-size: 64px;
+  font-weight: 200;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
+  max-width: 14ch;
+  text-wrap: balance;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr 1fr;
+  gap: 34px;
+  align-items: end;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 26px 24px 22px;
+  border-radius: 22px;
+  background: rgba(14, 14, 17, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+}
+
+.statLabel {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.statUnit {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* ---------- intro / outro cards ---------- */
+
+.card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(70% 50% at 50% 30%, rgba(238, 79, 166, 0.18), transparent 70%),
+    radial-gradient(60% 45% at 50% 88%, rgba(63, 83, 200, 0.16), transparent 70%),
+    #050505;
+  pointer-events: none;
+}
+
+.cardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: 0 96px;
+  text-align: center;
+  align-items: center;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 84px;
+  font-weight: 200;
+  letter-spacing: -0.035em;
+  line-height: 1.03;
+  text-wrap: balance;
+}
+
+.cardMeta {
+  font-size: 30px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* Sized to the widest figure we expect ("100.0"), so the unlit dots read as a
+   panel bezel rather than as dead space to the right of the number. */
+.outroFigure {
+  width: 460px;
+}
+
+.outroUnit {
+  font-size: 24px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.outroRow {
+  display: flex;
+  gap: 40px;
+  font-size: 30px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.brand {
+  margin-top: 34px;
+  padding: 18px 44px;
+  border-radius: 999px;
+  background: #c8f135;
+  color: #050505;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- always-on attribution (licensing, not decoration) ---------- */
+
+.attribution {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+  padding: 30px 40px 42px;
+  font-size: 21px;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  background: linear-gradient(0deg, rgba(5, 5, 5, 0.75), rgba(5, 5, 5, 0));
+}
+
+.attribution span + span::before {
+  content: "·";
+  margin-right: 26px;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+/* ---------- diagnostics ---------- */
+
+.placeholderBadge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 0;
+  text-align: center;
+  font-size: 20px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #050505;
+  background: #ff6a2e;
+  z-index: 5;
+}
+
+.error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 0 96px;
+  text-align: center;
+  background: linear-gradient(172deg, #ff8a3d 0%, #ff6a2e 30%, #c4202e 68%, #5c0d14 100%);
+  z-index: 6;
+}
+
+.errorTitle {
+  font-size: 56px;
+  font-weight: 200;
+}
+
+.errorBody {
+  font-size: 26px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.86);
+}
