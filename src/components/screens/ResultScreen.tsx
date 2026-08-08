@@ -1,6 +1,6 @@
 import type { ActivityStats } from "@/lib/types";
 import { AppBar } from "@/components/AppBar";
-import { ButtonLink, ButtonRow } from "@/components/Button";
+import { Button, ButtonLink, ButtonRow } from "@/components/Button";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { ShareIcon } from "@/components/icons";
 import { formatDuration, formatPace, formatShortDate, km, metres } from "@/components/format";
@@ -70,7 +70,11 @@ export function ResultScreen({
           <ButtonLink href={download} variant="primary" download="stravinator-flyover.mp4">
             Save video
           </ButtonLink>
-        ) : null}
+        ) : (
+          <Button variant="primary" disabled>
+            Save video
+          </Button>
+        )}
         <ButtonRow>
           <ButtonLink href={shareHref ?? "#"} variant="quiet" small external>
             Share link

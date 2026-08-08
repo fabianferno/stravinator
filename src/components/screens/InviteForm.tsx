@@ -12,18 +12,9 @@ export interface InviteFormProps {
 
 export function InviteForm({ connectHref, alreadyInvited = false }: InviteFormProps) {
   const [code, setCode] = useState("");
-  const ready = alreadyInvited || code.trim().length > 0;
 
   return (
-    <form
-      className="dock"
-      action={connectHref}
-      method="get"
-      aria-labelledby="invite-heading"
-      onSubmit={(e) => {
-        if (!ready) e.preventDefault();
-      }}
-    >
+    <form className="dock" action={connectHref} method="get" aria-labelledby="invite-heading">
       <h2 className="sr-only" id="invite-heading">
         Join the beta
       </h2>
@@ -39,12 +30,13 @@ export function InviteForm({ connectHref, alreadyInvited = false }: InviteFormPr
             placeholder="Invite code"
             autoComplete="one-time-code"
             spellCheck={false}
+            required
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
         </>
       )}
-      <Button type="submit" variant="primary" disabled={!ready}>
+      <Button type="submit" variant="primary">
         Connect Strava
       </Button>
     </form>

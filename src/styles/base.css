@@ -128,9 +128,12 @@ a {
   height: 40px;
 }
 
+/* keeps the title optically centred when a slot is empty */
 .circ.spacer {
   background: transparent;
   pointer-events: none;
+  width: 46px;
+  height: 46px;
 }
 
 .body {
