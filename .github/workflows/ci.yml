@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck, lint, test, build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: stravinator_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Host port 55432 matches what src/lib/db/testdb.ts defaults to.
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:55432/stravinator_test?sslmode=disable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Test
+        run: npm test 2>&1 | tee test-output.log
+
+      # The queue/db suites skip themselves (loudly) when Postgres is
+      # unreachable. A green-but-skipped run would silently stop testing the
+      # queue semantics, so fail the build if that ever happens in CI.
+      - name: Assert the Postgres integration tests actually ran
+        run: |
+          if grep -q "\[db tests\] SKIPPED" test-output.log; then
+            echo "::error::Postgres integration tests were SKIPPED — the service container was unreachable."
+            exit 1
+          fi
+          for f in src/lib/jobs/queue.test.ts src/lib/db/db.test.ts; do
+            line=$(grep -F "$f" test-output.log || true)
+            if [ -z "$line" ]; then
+              echo "::error::$f did not appear in the test output at all."
+              exit 1
+            fi
+            if printf '%s' "$line" | grep -qi "skipped"; then
+              echo "::error::$f reported skipped tests: $line"
+              exit 1
+            fi
+          done
+          echo "Postgres integration tests ran."
+
+      - name: Build
+        # Placeholder values only; nothing here reaches a real service. The app
+        # reads these at build time, and next build fails without them.
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:55432/stravinator_test
+          SESSION_SECRET: ci-placeholder-session-secret-not-a-real-key
+          STRAVA_CLIENT_ID: "0"
+          STRAVA_CLIENT_SECRET: ci-placeholder
+          STRAVA_REDIRECT_URI: http://localhost:3000/api/auth/strava/callback
+          NEXT_PUBLIC_MAPBOX_TOKEN: ""
+          INVITE_CODES: ci-placeholder
+          WORKER_TOKEN: ci-placeholder-worker-token
+          APP_URL: http://localhost:3000
+        run: npx next build

@@ -1,0 +1,54 @@
+# Local end-to-end stack: Postgres + the render worker.
+#
+# No secrets live in this file. Everything sensitive is read from your shell or
+# a local .env (which is gitignored):
+#
+#   cp .env.example .env && $EDITOR .env
+#   docker compose up --build
+#
+# The app itself still runs on the host (`npm run dev`); the worker reaches it
+# via host.docker.internal.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-stravinator}
+    ports:
+      # 55432 on the host is what the queue integration tests expect.
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Inside the compose network Postgres is reachable by service name on 5432.
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/stravinator}
+      APP_URL: ${APP_URL:-http://host.docker.internal:3000}
+      WORK_DIR: /data
+      # Required, no default: must match the app's WORKER_TOKEN.
+      WORKER_TOKEN: ${WORKER_TOKEN:?set WORKER_TOKEN in your environment or .env}
+      NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+      WORKER_ID: ${WORKER_ID:-compose-worker}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Tile cache and rendered output. Tiles bill per request — keep this.
+      - workerdata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  workerdata:

@@ -1,0 +1,111 @@
+name: Nightly end-to-end render
+
+# Spec §9: "one full run from fixture activity to playable MP4, in CI, nightly."
+#
+# IMPORTANT — WHAT THIS DOES *NOT* PROVE:
+# There is no Mapbox token in CI, so /render draws its wireframe placeholder
+# terrain and worker/smoke.ts passes `allowPlaceholder: true`. This job proves
+# the frame-stepping, screenshot, and H.264 encode path end to end. It proves
+# NOTHING about Mapbox terrain, satellite imagery, the sky layer, trail draping,
+# or the tile-settling gate. A green nightly is not verified terrain.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  render:
+    name: fixture activity -> playable MP4
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      APP_URL: http://localhost:3000
+      WORKER_TOKEN: nightly-placeholder-worker-token
+      DATABASE_URL: postgres://postgres:postgres@localhost:55432/stravinator
+      SESSION_SECRET: nightly-placeholder-session-secret
+      STRAVA_CLIENT_ID: "0"
+      STRAVA_CLIENT_SECRET: nightly-placeholder
+      STRAVA_REDIRECT_URI: http://localhost:3000/api/auth/strava/callback
+      NEXT_PUBLIC_MAPBOX_TOKEN: ""
+      INVITE_CODES: nightly-placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
+      # `channel: "chromium"` in worker/capture.ts needs the full Chromium
+      # build, not chromium-headless-shell.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npx next build
+
+      - name: Start app
+        run: |
+          npm start > app.log 2>&1 &
+          echo $! > app.pid
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null "$APP_URL"; then
+              echo "app up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::app never came up on $APP_URL"
+          cat app.log
+          exit 1
+
+      - name: Render 60 frames
+        run: npx tsx worker/smoke.ts 60
+
+      - name: Assert the MP4 is H.264 1080x1920 @ 30fps
+        run: |
+          set -euo pipefail
+          OUT=.worker/smoke/smoke.mp4
+          test -f "$OUT" || { echo "::error::$OUT was not produced"; exit 1; }
+          ffprobe -v error -select_streams v:0 \
+            -show_entries stream=codec_name,width,height,avg_frame_rate \
+            -of default=noprint_wrappers=1:nokey=1 "$OUT" > probe.txt
+          cat probe.txt
+          CODEC=$(sed -n 1p probe.txt)
+          WIDTH=$(sed -n 2p probe.txt)
+          HEIGHT=$(sed -n 3p probe.txt)
+          RATE=$(sed -n 4p probe.txt)
+          fail=0
+          [ "$CODEC" = "h264" ] || { echo "::error::codec is $CODEC, expected h264"; fail=1; }
+          [ "$WIDTH" = "1080" ] || { echo "::error::width is $WIDTH, expected 1080"; fail=1; }
+          [ "$HEIGHT" = "1920" ] || { echo "::error::height is $HEIGHT, expected 1920"; fail=1; }
+          case "$RATE" in
+            30/1|30) ;;
+            *) echo "::error::frame rate is $RATE, expected 30/1"; fail=1 ;;
+          esac
+          exit $fail
+
+      - name: Upload the video and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-render
+          path: |
+            .worker/smoke/smoke.mp4
+            app.log
+          if-no-files-found: warn
+
+      - name: Stop app
+        if: always()
+        run: kill "$(cat app.pid)" 2>/dev/null || true

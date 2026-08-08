@@ -1,0 +1,41 @@
+# Render worker image: Playwright Chromium + ffmpeg + Node 22.
+#
+# The base image is pinned to the exact Playwright version in package.json.
+# If you bump `playwright` there, bump this tag in the same commit or the
+# driver and the preinstalled browsers drift apart.
+FROM mcr.microsoft.com/playwright:v1.62.1-noble
+
+# The base image ships Node 22 and every system library Chromium needs.
+# It does NOT ship the ffmpeg CLI (Playwright bundles its own private build for
+# video recording, which we cannot invoke), so install it explicitly.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    WORK_DIR=/data
+
+WORKDIR /app
+
+# Dependencies first so a source-only change does not reinstall the world.
+COPY package.json package-lock.json ./
+# devDependencies are required at runtime: the worker is executed through `tsx`
+# and Playwright itself is a devDependency.
+RUN npm ci --include=dev
+
+# worker/capture.ts launches with `channel: "chromium"` — the full Chromium
+# build, not the headless shell, because the shell's WebGL is too weak for
+# Mapbox terrain. `playwright install chromium` provides exactly that channel;
+# do not replace it with chromium-headless-shell.
+RUN npx playwright install chromium
+
+COPY . .
+
+# Tile cache and finished videos live here. Mount a persistent volume:
+# Mapbox tiles bill per request, so an empty cache on every boot costs money.
+# (Finished MP4s are also served from this disk today — see docs/deploy.md.)
+RUN mkdir -p /data/tile-cache /data/out
+VOLUME ["/data"]
+
+CMD ["npm", "run", "worker"]
