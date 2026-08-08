@@ -1,0 +1,128 @@
+/* Empty / no-eligible-activities state. Deliberately neutral: nothing here is
+   a recoverable failure, so --grad-fire is not used anywhere in this file. */
+
+.empty-lede {
+  border-radius: var(--r-card);
+  background: var(--raised);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty-kind {
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.empty-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.empty-body {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-mid);
+}
+
+/* per-reason breakdown, so the athlete sees the real numbers */
+.empty-breakdown {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.empty-breakdown li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px 14px;
+}
+
+.empty-count {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  flex-shrink: 0;
+}
+
+.empty-reason {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-mid);
+}
+
+/* what to do next — the useful half of the screen */
+.empty-next {
+  border-radius: var(--r-card);
+  background: var(--raised-2);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty-next h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+
+.empty-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-mid);
+}
+
+.empty-checks li {
+  display: flex;
+  gap: 10px;
+}
+
+.empty-checks li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-top: 9px;
+  border-radius: var(--r-pill);
+  background: var(--lime);
+  flex-shrink: 0;
+}
+
+.empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+@media (min-width: 900px) {
+  .empty-actions {
+    flex-direction: row;
+  }
+
+  .empty-actions > * {
+    flex: 1;
+  }
+}

@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { ActivityListScreen } from "@/components/screens/ActivityListScreen";
+import { EmptyActivitiesScreen } from "@/components/screens/EmptyActivitiesScreen";
+import type { IneligibleCounts } from "@/components/screens/EmptyActivitiesScreen";
 import { ErrorScreen } from "@/components/screens/ErrorScreen";
 import { getAthleteId } from "@/lib/session";
 import { getActivities } from "@/lib/activities";
@@ -37,6 +39,26 @@ export default async function ActivitiesPage() {
         title="Couldn't load your runs"
         detail={failure ?? "We couldn't reach Strava just now."}
         action={{ label: "Try again", href: "/activities" }}
+        backHref="/"
+      />
+    );
+  }
+
+  // Nothing to pick: either no activities at all, or every one of them was
+  // rejected. Spec §7 expects the second to be the commonest support issue, so
+  // it gets its own screen rather than an empty list.
+  const renderable = activities.some((a) => a.ineligible === null);
+  if (!renderable) {
+    const ineligibleCounts: IneligibleCounts = {};
+    for (const activity of activities) {
+      if (!activity.ineligible) continue;
+      ineligibleCounts[activity.ineligible] = (ineligibleCounts[activity.ineligible] ?? 0) + 1;
+    }
+    return (
+      <EmptyActivitiesScreen
+        totalActivities={activities.length}
+        ineligibleCounts={ineligibleCounts}
+        refreshHref="/activities"
         backHref="/"
       />
     );
