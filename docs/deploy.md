@@ -44,7 +44,7 @@ Every variable in `.env.example`, and who needs it.
 | `STRAVA_CLIENT_ID` | ✅ | — | Strava API application ID. |
 | `STRAVA_CLIENT_SECRET` | ✅ | — | Strava API secret. Secret. |
 | `STRAVA_REDIRECT_URI` | ✅ | — | Must exactly match the callback registered in the Strava app settings, e.g. `https://your-domain/api/auth/strava/callback`. |
-| `NEXT_PUBLIC_MAPBOX_TOKEN` | ✅ | ✅ | Mapbox GL token. Public by nature — restrict it by URL in the Mapbox dashboard. Without it `/render` draws placeholder wireframe terrain. The worker needs it too, since it renders the same page. |
+| `NEXT_PUBLIC_CESIUM_ION_TOKEN` | ✅ | ✅ | Cesium ion access token. Public by nature — scope it to the Stravinator asset set and restrict its allowed URLs in the ion dashboard. Without it `/render` draws placeholder wireframe terrain. The worker needs it too, since it renders the same page. |
 | `DATABASE_URL` | ✅ | ✅ | Postgres 16 connection string. Managed providers usually need `?sslmode=require`. |
 | `SESSION_SECRET` | ✅ | — | Signing key for the athlete session cookie. Generate with `openssl rand -hex 32`. Rotating it logs everyone out. |
 | `INVITE_CODES` | ✅ | — | Comma-separated invite codes. **Empty means nobody can sign in.** |
@@ -108,7 +108,7 @@ docker build -f Dockerfile.worker -t stravinator-worker .
 
 Requirements wherever you run it:
 
-- **A persistent volume mounted at `/data`.** Mapbox tiles bill per request and the Chromium disk
+- **A persistent volume mounted at `/data`.** Ion terrain and imagery tiles count against the account's streaming quota and the Chromium disk
   cache lives here; losing it on every restart costs real money. Finished MP4s live in `/data/out`.
 - **Memory.** Chromium rendering 1080×1920 WebGL frames wants ~2 GB. 1 GB will OOM mid-render.
 - **One instance to start.** The queue is safe under concurrency (`FOR UPDATE SKIP LOCKED`, leases,
@@ -121,7 +121,7 @@ Requirements wherever you run it:
 ```bash
 fly launch --no-deploy --dockerfile Dockerfile.worker
 fly volumes create stravinator_data --size 20   # GB
-fly secrets set DATABASE_URL=... WORKER_TOKEN=... NEXT_PUBLIC_MAPBOX_TOKEN=... APP_URL=...
+fly secrets set DATABASE_URL=... WORKER_TOKEN=... NEXT_PUBLIC_CESIUM_ION_TOKEN=... APP_URL=...
 fly deploy
 ```
 
@@ -187,5 +187,5 @@ The worker container reaches the host app through `host.docker.internal:3000`.
 - `.github/workflows/ci.yml` — every push and PR: typecheck, lint, tests against a real Postgres 16
   service container (the run fails if the queue integration tests skip), and `next build`.
 - `.github/workflows/nightly.yml` — nightly end-to-end render, asserted with ffprobe to be H.264
-  1080×1920 @ 30fps. There is no Mapbox token in CI, so it renders **placeholder terrain**: it
+  1080×1920 @ 30fps. There is no Cesium ion token in CI, so it renders **placeholder terrain**: it
   proves the capture and encode path, not the map. A green nightly is not verified terrain.

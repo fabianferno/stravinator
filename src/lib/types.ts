@@ -137,7 +137,7 @@ export const OUTPUT = {
   maxDurationSec: 40,
 } as const;
 
-export const ATTRIBUTION = ["Powered by Strava", "© Mapbox", "© OpenStreetMap"] as const;
+export const ATTRIBUTION = ["Powered by Strava", "© Cesium ion", "© Microsoft Bing", "© Maxar"] as const;
 
 /** Shortest signed angular difference a→b, in degrees, within (-180, 180]. */
 export function angleDelta(a: number, b: number): number {

@@ -64,9 +64,9 @@ tests need a dev server running; `smoke-job.ts` additionally needs `DATABASE_URL
 
 ## Known gaps
 
-- **No Mapbox token yet.** `/render` falls back to wireframe placeholder terrain behind a loud
-  banner, and `captureVideo` refuses to encode it unless explicitly told to. Terrain, sky, and the
-  real tile-settling timing are unverified until a token exists.
+- **Terrain is Cesium ion** (World Terrain + Bing aerial via `NEXT_PUBLIC_CESIUM_ION_TOKEN`).
+  Without the token `/render` falls back to wireframe placeholder terrain behind a loud banner,
+  and `captureVideo` refuses to encode it unless explicitly told to.
 - **Strava fixtures are synthetic**, plausible but not recorded from a live account. Several API
   behaviours are assumed rather than observed — see the notes in `src/lib/strava/`.
 - **Videos are served from the worker's local disk**, so the app and worker must share a filesystem.

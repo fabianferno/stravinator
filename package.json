@@ -10,10 +10,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "worker": "tsx worker/index.ts",
-    "migrate": "tsx src/lib/db/migrate.ts"
+    "migrate": "tsx src/lib/db/migrate.ts",
+    "postinstall": "node scripts/copy-cesium-assets.mjs"
   },
   "dependencies": {
-    "mapbox-gl": "^3.28.1",
+    "cesium": "^1.145.0",
     "maplibre-gl": "^6.2.0",
     "next": "16.3.0",
     "pg": "^8.22.0",

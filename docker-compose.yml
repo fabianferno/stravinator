@@ -40,7 +40,7 @@ services:
       WORK_DIR: /data
       # Required, no default: must match the app's WORKER_TOKEN.
       WORKER_TOKEN: ${WORKER_TOKEN:?set WORKER_TOKEN in your environment or .env}
-      NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+      NEXT_PUBLIC_CESIUM_ION_TOKEN: ${NEXT_PUBLIC_CESIUM_ION_TOKEN:-}
       WORKER_ID: ${WORKER_ID:-compose-worker}
     extra_hosts:
       - "host.docker.internal:host-gateway"

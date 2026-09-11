@@ -26,7 +26,7 @@ async function main() {
     outPath,
     tileCacheDir: path.join(DIR, "tiles"),
     maxFrames: FRAMES,
-    // No Mapbox token in this environment; we are proving the frame-stepping
+    // No Cesium ion token in this environment; we are proving the frame-stepping
     // and encoding path, not the terrain imagery.
     allowPlaceholder: true,
     onProgress: (f, total) => {

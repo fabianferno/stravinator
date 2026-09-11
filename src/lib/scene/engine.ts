@@ -21,7 +21,7 @@ export interface SceneEngine {
    */
   seek(frame: number): Promise<void>;
   destroy(): void;
-  /** True when real Mapbox tiles are in play; false for the token-less placeholder. */
+  /** True when real terrain data is in play; false for the token-less placeholder. */
   readonly isReal: boolean;
 }
 

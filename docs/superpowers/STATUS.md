@@ -37,11 +37,12 @@ ffmpeg produced a valid 1080×1920 / 30fps / H.264 MP4.
    unvalidated against it.
 2. **Strava app credentials.** OAuth is implemented against synthetic fixtures; nothing has ever
    talked to the live API.
-3. **Mapbox token.** `/render` currently draws placeholder wireframe terrain. Unverified until a
-   token exists: `mapbox-dem` + `setTerrain`, the satellite style, sky layer, whether the trail
-   drapes correctly, and the real timing of the tile-settling gate — which is the piece most likely
-   to need tuning under genuine tile fetches.
-4. **Mapbox video-export terms + tile cost.** Attribution is already burned into every frame.
+3. **Cesium ion (resolved 2026-09-11).** `/render` defaults to the `cesium` engine — World
+   Terrain + Bing aerial imagery via `NEXT_PUBLIC_CESIUM_ION_TOKEN`. Verified against the fixture
+   through the real capture driver: cold start settles in ~70 s on SwiftShader, then a few
+   seconds per adjacent frame. Mapbox GL has been removed.
+4. **Cesium ion terms + streaming quota.** Attribution is burned into every frame; ion's quota
+   is per account, so watch it once real athletes start rendering.
 
 ## Open items
 

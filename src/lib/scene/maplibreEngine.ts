@@ -25,7 +25,7 @@
  *
  * DETERMINISM
  * -----------
- * Copied wholesale from `mapboxEngine.ts`, because `/render` is a frame server,
+ * Same rules as `cesiumEngine.ts`, because `/render` is a frame server,
  * not a map viewer: `jumpTo` only, `fadeDuration: 0`, every interaction handler
  * disabled, zero-duration style transitions, no wall-clock anywhere except the
  * failure guard in `waitSettled`, and a `seek` that rejects rather than
@@ -141,7 +141,7 @@ export function createMaplibreEngine(input: SceneInput): SceneEngine {
     interactive: false,
     attributionControl: false,
     // MapLibre v6 moved the WebGL context flags here. `preserveDrawingBuffer`
-    // keeps the canvas readable after compositing, matching the Mapbox engine.
+    // keeps the canvas readable after compositing, as the Cesium engine does.
     canvasContextAttributes: { preserveDrawingBuffer: true, antialias: false },
     refreshExpiredTiles: false,
     trackResize: false,

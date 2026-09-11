@@ -1,10 +1,10 @@
 /**
  * Token-less fallback scene.
  *
- * When `NEXT_PUBLIC_MAPBOX_TOKEN` is unset there is no map to render, but the
+ * When `NEXT_PUBLIC_CESIUM_ION_TOKEN` is unset there is no map to render, but the
  * page still has to be testable: the capture driver's whole contract is
  * `sceneReady` / `frameCount` / `seekToFrame`, and that contract should be
- * verifiable without a billable Mapbox account. So we draw a deliberately
+ * verifiable without a billable Cesium ion account. So we draw a deliberately
  * synthetic wireframe terrain with the same camera maths — right pitch, right
  * bearing, right trail — and mark it loudly as NOT the real scene so nobody
  * mistakes a placeholder capture for a shippable video.

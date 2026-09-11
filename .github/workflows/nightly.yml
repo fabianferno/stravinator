@@ -3,10 +3,10 @@ name: Nightly end-to-end render
 # Spec §9: "one full run from fixture activity to playable MP4, in CI, nightly."
 #
 # IMPORTANT — WHAT THIS DOES *NOT* PROVE:
-# There is no Mapbox token in CI, so /render draws its wireframe placeholder
+# There is no Cesium ion token in CI, so /render draws its wireframe placeholder
 # terrain and worker/smoke.ts passes `allowPlaceholder: true`. This job proves
 # the frame-stepping, screenshot, and H.264 encode path end to end. It proves
-# NOTHING about Mapbox terrain, satellite imagery, the sky layer, trail draping,
+# NOTHING about Cesium terrain, aerial imagery, the atmosphere, trail draping,
 # or the tile-settling gate. A green nightly is not verified terrain.
 
 on:
@@ -28,7 +28,7 @@ jobs:
       STRAVA_CLIENT_ID: "0"
       STRAVA_CLIENT_SECRET: nightly-placeholder
       STRAVA_REDIRECT_URI: http://localhost:3000/api/auth/strava/callback
-      NEXT_PUBLIC_MAPBOX_TOKEN: ""
+      NEXT_PUBLIC_CESIUM_ION_TOKEN: ""
       INVITE_CODES: nightly-placeholder
 
     steps:

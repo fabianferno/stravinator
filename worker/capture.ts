@@ -24,7 +24,7 @@ export interface CaptureOptions {
   url: string;
   /** Where the finished MP4 lands. */
   outPath: string;
-  /** Directory for the Mapbox tile cache, reused across renders. */
+  /** Directory for the terrain/imagery tile cache, reused across renders. */
   tileCacheDir: string;
   /** Called after each frame so the job can report honest progress. */
   onProgress?: (frame: number, total: number) => void | Promise<void>;
@@ -74,10 +74,10 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
   try {
     browser = await chromium.launch({
       // Full Chromium, not the headless shell: the shell's WebGL support is
-      // too limited to render Mapbox terrain.
+      // too limited to render 3D terrain.
       channel: "chromium",
       args: [
-        // Persist Mapbox tiles across frames and across renders. Tiles bill per
+        // Persist terrain and imagery tiles across frames and across renders. Tiles bill per
         // request, so this is a cost control, not just a speed one.
         `--disk-cache-dir=${tileCacheDir}`,
         "--disk-cache-size=1073741824",
@@ -119,13 +119,13 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
       throw new Error(`Render page reported an invalid frame count: ${frameCount}`);
     }
 
-    // The scene falls back to wireframe placeholder terrain when no Mapbox
+    // The scene falls back to wireframe placeholder terrain when no Cesium ion
     // token is configured. That is fine for development and must never reach
     // an athlete as a finished video.
     const real = await page.evaluate(() => window.sceneInfo?.real !== false);
     if (!real && !allowPlaceholder) {
       throw new Error(
-        "Render page is using placeholder terrain — NEXT_PUBLIC_MAPBOX_TOKEN is not configured.",
+        "Render page is using placeholder terrain — NEXT_PUBLIC_CESIUM_ION_TOKEN is not configured.",
       );
     }
 

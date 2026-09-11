@@ -14,7 +14,7 @@ export interface AttributionProps {
  */
 export function Attribution({ withMap = false, note, className }: AttributionProps) {
   const parts = ["Powered by Strava"];
-  if (withMap) parts.push("© Mapbox", "© OpenStreetMap");
+  if (withMap) parts.push("© Cesium ion", "© Microsoft Bing", "© Maxar");
   if (note) parts.push(note);
   return <span className={["attrib", className ?? ""].filter(Boolean).join(" ")}>{parts.join(" · ")}</span>;
 }

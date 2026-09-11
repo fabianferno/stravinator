@@ -3,14 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useSearchParams } from "next/navigation";
-// Mapbox's own stylesheet, scoped to this route rather than the app shell so
-// the page-shell agent's globals.css stays untouched.
-import "mapbox-gl/dist/mapbox-gl.css";
+// The engines' own stylesheets, scoped to this route rather than the app shell
+// so the page-shell agent's globals.css stays untouched.
+import "cesium/Build/Cesium/Widgets/widgets.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { ATTRIBUTION, OUTPUT, type RenderPayload } from "@/lib/types";
 import { loadPayload } from "@/lib/scene/payload";
-import { createMapboxEngine } from "@/lib/scene/mapboxEngine";
+import { createCesiumEngine, CESIUM_ATTRIBUTION } from "@/lib/scene/cesiumEngine";
 import { createMaplibreEngine, MAPTERHORN_ATTRIBUTION } from "@/lib/scene/maplibreEngine";
 import { createStylizedEngine } from "@/lib/scene/stylizedEngine";
 import { createPlaceholderEngine } from "@/lib/scene/placeholderEngine";
@@ -33,12 +33,12 @@ const FRAME_TIMEOUT_MS = 20_000;
  * Which renderer paints the scene. Selected with `?engine=` so the owner can
  * compare visual directions from real frames rather than from descriptions.
  *
- *  - `mapbox`      photographic satellite terrain (billed per tile)
+ *  - `cesium`      photographic aerial imagery on Cesium World Terrain (ion)
  *  - `maplibre`    open elevation + shaded relief, no imagery, no per-tile cost
  *  - `stylized`    open elevation drawn in the nocturnal identity
  *  - `placeholder` synthetic wireframe, not real data, never shippable
  */
-const ENGINE_NAMES = ["mapbox", "maplibre", "stylized", "placeholder"] as const;
+const ENGINE_NAMES = ["cesium", "maplibre", "stylized", "placeholder"] as const;
 type EngineName = (typeof ENGINE_NAMES)[number];
 
 function parseEngine(raw: string | null): EngineName | null {
@@ -58,6 +58,8 @@ function attributionFor(engine: EngineName | null): readonly string[] {
     case "maplibre":
     case "stylized":
       return ["Powered by Strava", MAPTERHORN_ATTRIBUTION];
+    case "cesium":
+      return ["Powered by Strava", ...CESIUM_ATTRIBUTION];
     default:
       return ATTRIBUTION;
   }
@@ -65,11 +67,11 @@ function attributionFor(engine: EngineName | null): readonly string[] {
 
 function createEngine(engine: EngineName, input: SceneInput, token: string | undefined): SceneEngine {
   switch (engine) {
-    case "mapbox":
+    case "cesium":
       if (!token) {
-        throw new Error("engine=mapbox requires NEXT_PUBLIC_MAPBOX_TOKEN to be set");
+        throw new Error("engine=cesium requires NEXT_PUBLIC_CESIUM_ION_TOKEN to be set");
       }
-      return createMapboxEngine(input, token);
+      return createCesiumEngine(input, token);
     case "maplibre":
       return createMaplibreEngine(input);
     case "stylized":
@@ -153,7 +155,7 @@ export default function RenderScene() {
         const host = mapHostRef.current;
         if (!host) throw new Error("map host missing");
 
-        const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+        const token = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN;
         const input: SceneInput = {
           container: host,
           keyframes: data.keyframes,
@@ -162,10 +164,10 @@ export default function RenderScene() {
           frameTimeoutMs: FRAME_TIMEOUT_MS,
         };
 
-        // Default behaviour is unchanged: Mapbox when a token is configured,
-        // the clearly-marked placeholder when it is not. `?engine=` only ever
-        // overrides that explicitly.
-        const chosen = parseEngine(requestedEngine) ?? (token ? "mapbox" : "placeholder");
+        // Cesium when an ion token is configured, the clearly-marked
+        // placeholder when it is not. `?engine=` only ever overrides that
+        // explicitly.
+        const chosen = parseEngine(requestedEngine) ?? (token ? "cesium" : "placeholder");
         flushSync(() => setEngineName(chosen));
         engine = createEngine(chosen, input, token);
 

@@ -85,7 +85,7 @@ jobs:
           STRAVA_CLIENT_ID: "0"
           STRAVA_CLIENT_SECRET: ci-placeholder
           STRAVA_REDIRECT_URI: http://localhost:3000/api/auth/strava/callback
-          NEXT_PUBLIC_MAPBOX_TOKEN: ""
+          NEXT_PUBLIC_CESIUM_ION_TOKEN: ""
           INVITE_CODES: ci-placeholder
           WORKER_TOKEN: ci-placeholder-worker-token
           APP_URL: http://localhost:3000
