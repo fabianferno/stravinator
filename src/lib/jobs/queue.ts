@@ -1,4 +1,6 @@
-import { query, withTransaction } from "@/lib/db/pool";
+import { randomUUID } from "node:crypto";
+import type { Filter } from "mongodb";
+import { jobs, type JobDoc } from "@/lib/db/client";
 import type { ActivityStats, CameraKeyframe, Job, JobStatus, LngLat } from "@/lib/types";
 
 /** Crashed-worker retries are capped so a poison job cannot spin forever. */
@@ -7,52 +9,54 @@ export const MAX_ATTEMPTS = 3;
 /** Lease length a worker takes by default; heartbeats extend it. */
 export const DEFAULT_LEASE_SECONDS = 120;
 
-/** Columns selected for every row that becomes a `Job`. */
-const JOB_COLUMNS = `
-  id, athlete_id, activity_id, status, progress, frames_done, frame_count,
-  error, video_url, attempts, created_at, updated_at
-`;
+/** The artifacts are large; every read that becomes a `Job` leaves them out. */
+const JOB_PROJECTION = { keyframes: 0, stats: 0, route: 0 } as const;
 
-interface JobRow {
-  id: string;
-  athlete_id: string;
-  activity_id: string;
-  status: JobStatus;
-  progress: string | number;
-  frames_done: number;
-  frame_count: number;
-  error: string | null;
-  video_url: string | null;
-  attempts: number;
-  created_at: Date;
-  updated_at: Date;
-}
+type JobView = Omit<JobDoc, "keyframes" | "stats" | "route">;
 
-function toJob(row: JobRow): Job {
+function toJob(d: JobView): Job {
   return {
-    id: row.id,
-    athleteId: row.athlete_id,
-    activityId: row.activity_id,
-    status: row.status,
-    progress: Number(row.progress),
-    framesDone: row.frames_done,
-    frameCount: row.frame_count,
-    error: row.error,
-    videoUrl: row.video_url,
-    attempts: row.attempts,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: d._id,
+    athleteId: d.athleteId,
+    activityId: d.activityId,
+    status: d.status,
+    progress: d.progress,
+    framesDone: d.framesDone,
+    frameCount: d.frameCount,
+    error: d.error,
+    videoUrl: d.videoUrl,
+    attempts: d.attempts,
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
   };
 }
 
+const secondsFromNow = (s: number) => new Date(Date.now() + s * 1000);
+
 export async function enqueue(athleteId: string, activityId: string): Promise<Job> {
-  const { rows } = await query<JobRow>(
-    `INSERT INTO jobs (athlete_id, activity_id, status)
-     VALUES ($1, $2, 'queued')
-     RETURNING ${JOB_COLUMNS}`,
-    [athleteId, activityId],
-  );
-  return toJob(rows[0]);
+  const now = new Date();
+  const doc: JobDoc = {
+    _id: randomUUID(),
+    athleteId,
+    activityId,
+    status: "queued",
+    progress: 0,
+    framesDone: 0,
+    frameCount: 0,
+    error: null,
+    videoUrl: null,
+    attempts: 0,
+    workerId: null,
+    leaseExpiresAt: null,
+    runAfter: now,
+    keyframes: null,
+    stats: null,
+    route: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await jobs().insertOne(doc);
+  return toJob(doc);
 }
 
 /**
@@ -60,37 +64,36 @@ export async function enqueue(athleteId: string, activityId: string): Promise<Jo
  *
  * Claimable means: `queued` and past its backoff, OR in a mid-flight status
  * whose lease has expired — that second arm is what makes a crashed worker's
- * job recoverable. `FOR UPDATE SKIP LOCKED` lets concurrent workers pass over
- * each other's locked rows instead of serialising or double-claiming.
+ * job recoverable. `findOneAndUpdate` matches and writes as one atomic step on
+ * a single document, so two workers racing on the same job cannot both win:
+ * the loser's filter no longer matches and it moves on to the next candidate.
  */
 export async function claim(workerId: string, leaseSeconds: number): Promise<Job | null> {
-  return withTransaction(async (client) => {
-    const { rows: candidates } = await client.query<{ id: string }>(
-      `SELECT id FROM jobs
-        WHERE (status = 'queued' AND run_after <= now())
-           OR (status NOT IN ('queued', 'done', 'failed')
-               AND lease_expires_at IS NOT NULL
-               AND lease_expires_at <= now())
-        ORDER BY created_at
-        FOR UPDATE SKIP LOCKED
-        LIMIT 1`,
-    );
-    if (candidates.length === 0) return null;
-
-    const { rows } = await client.query<JobRow>(
-      `UPDATE jobs
-          SET status = 'fetching',
-              worker_id = $2,
-              attempts = attempts + 1,
-              lease_expires_at = now() + make_interval(secs => $3::double precision),
-              error = NULL,
-              updated_at = now()
-        WHERE id = $1
-        RETURNING ${JOB_COLUMNS}`,
-      [candidates[0].id, workerId, leaseSeconds],
-    );
-    return toJob(rows[0]);
-  });
+  const now = new Date();
+  const claimable: Filter<JobDoc> = {
+    $or: [
+      { status: "queued", runAfter: { $lte: now } },
+      {
+        status: { $nin: ["queued", "done", "failed"] },
+        leaseExpiresAt: { $ne: null, $lte: now },
+      },
+    ],
+  };
+  const doc = await jobs().findOneAndUpdate(
+    claimable,
+    {
+      $set: {
+        status: "fetching",
+        workerId,
+        leaseExpiresAt: secondsFromNow(leaseSeconds),
+        error: null,
+        updatedAt: now,
+      },
+      $inc: { attempts: 1 },
+    },
+    { sort: { createdAt: 1 }, returnDocument: "after", projection: JOB_PROJECTION },
+  );
+  return doc ? toJob(doc) : null;
 }
 
 /**
@@ -106,14 +109,11 @@ export async function heartbeat(
   workerId: string,
   leaseSeconds = DEFAULT_LEASE_SECONDS,
 ): Promise<boolean> {
-  const { rowCount } = await query(
-    `UPDATE jobs
-        SET lease_expires_at = now() + make_interval(secs => $3::double precision),
-            updated_at = now()
-      WHERE id = $1 AND worker_id = $2 AND status NOT IN ('queued', 'done', 'failed')`,
-    [jobId, workerId, leaseSeconds],
+  const { matchedCount } = await jobs().updateOne(
+    { _id: jobId, workerId, status: { $nin: ["queued", "done", "failed"] } },
+    { $set: { leaseExpiresAt: secondsFromNow(leaseSeconds), updatedAt: new Date() } },
   );
-  return (rowCount ?? 0) > 0;
+  return matchedCount > 0;
 }
 
 export interface StatusPatch {
@@ -135,39 +135,40 @@ export async function setStatus(
   status: JobStatus,
   patch: StatusPatch = {},
 ): Promise<Job | null> {
-  const sets = ["status = $2", "updated_at = now()"];
-  const params: unknown[] = [jobId, status];
+  const $set: Partial<JobDoc> = { status, updatedAt: new Date() };
+  if (patch.progress !== undefined) $set.progress = patch.progress;
+  if (patch.framesDone !== undefined) $set.framesDone = patch.framesDone;
+  if (patch.frameCount !== undefined) $set.frameCount = patch.frameCount;
+  if (patch.keyframes !== undefined) $set.keyframes = patch.keyframes;
+  if (patch.stats !== undefined) $set.stats = patch.stats;
+  if (patch.route !== undefined) $set.route = patch.route;
 
-  const push = (column: string, value: unknown) => {
-    params.push(value);
-    sets.push(`${column} = $${params.length}`);
-  };
-
-  if (patch.progress !== undefined) push("progress", patch.progress);
-  if (patch.framesDone !== undefined) push("frames_done", patch.framesDone);
-  if (patch.frameCount !== undefined) push("frame_count", patch.frameCount);
-  if (patch.keyframes !== undefined) push("keyframes", JSON.stringify(patch.keyframes));
-  if (patch.stats !== undefined) push("stats", JSON.stringify(patch.stats));
-  if (patch.route !== undefined) push("route", JSON.stringify(patch.route));
-
-  const { rows } = await query<JobRow>(
-    `UPDATE jobs SET ${sets.join(", ")} WHERE id = $1 RETURNING ${JOB_COLUMNS}`,
-    params,
+  const doc = await jobs().findOneAndUpdate(
+    { _id: jobId },
+    { $set },
+    { returnDocument: "after", projection: JOB_PROJECTION },
   );
-  return rows[0] ? toJob(rows[0]) : null;
+  return doc ? toJob(doc) : null;
 }
 
 /** Marks the job done and releases the lease. */
 export async function complete(jobId: string, videoUrl: string): Promise<Job | null> {
-  const { rows } = await query<JobRow>(
-    `UPDATE jobs
-        SET status = 'done', video_url = $2, progress = 1, error = NULL,
-            worker_id = NULL, lease_expires_at = NULL, updated_at = now()
-      WHERE id = $1
-      RETURNING ${JOB_COLUMNS}`,
-    [jobId, videoUrl],
+  const doc = await jobs().findOneAndUpdate(
+    { _id: jobId },
+    {
+      $set: {
+        status: "done",
+        videoUrl,
+        progress: 1,
+        error: null,
+        workerId: null,
+        leaseExpiresAt: null,
+        updatedAt: new Date(),
+      },
+    },
+    { returnDocument: "after", projection: JOB_PROJECTION },
   );
-  return rows[0] ? toJob(rows[0]) : null;
+  return doc ? toJob(doc) : null;
 }
 
 /**
@@ -178,21 +179,23 @@ export async function complete(jobId: string, videoUrl: string): Promise<Job | n
  * stack trace.
  */
 export async function fail(jobId: string, reason: string): Promise<Job | null> {
-  const { rows } = await query<JobRow>(
-    `UPDATE jobs
-        SET status = CASE WHEN attempts >= $3 THEN 'failed' ELSE 'queued' END,
-            error = $2,
-            progress = CASE WHEN attempts >= $3 THEN progress ELSE 0 END,
-            frames_done = CASE WHEN attempts >= $3 THEN frames_done ELSE 0 END,
-            worker_id = NULL,
-            lease_expires_at = NULL,
-            run_after = now(),
-            updated_at = now()
-      WHERE id = $1
-      RETURNING ${JOB_COLUMNS}`,
-    [jobId, reason, MAX_ATTEMPTS],
+  const now = new Date();
+  const release = { error: reason, workerId: null, leaseExpiresAt: null, runAfter: now, updatedAt: now };
+  // Two conditional writes rather than a read-then-write: whichever filter
+  // matches the current attempt count wins, and the other is a no-op.
+  const exhausted = await jobs().findOneAndUpdate(
+    { _id: jobId, attempts: { $gte: MAX_ATTEMPTS } },
+    { $set: { status: "failed", ...release } },
+    { returnDocument: "after", projection: JOB_PROJECTION },
   );
-  return rows[0] ? toJob(rows[0]) : null;
+  if (exhausted) return toJob(exhausted);
+
+  const retried = await jobs().findOneAndUpdate(
+    { _id: jobId, attempts: { $lt: MAX_ATTEMPTS } },
+    { $set: { status: "queued", progress: 0, framesDone: 0, ...release } },
+    { returnDocument: "after", projection: JOB_PROJECTION },
+  );
+  return retried ? toJob(retried) : null;
 }
 
 /**
@@ -204,33 +207,37 @@ export async function requeueForRateLimit(
   jobId: string,
   retryAfterSeconds: number,
 ): Promise<Job | null> {
-  const { rows } = await query<JobRow>(
-    `UPDATE jobs
-        SET status = 'queued',
-            attempts = GREATEST(attempts - 1, 0),
-            worker_id = NULL,
-            lease_expires_at = NULL,
-            run_after = now() + make_interval(secs => $2::double precision),
-            error = NULL,
-            updated_at = now()
-      WHERE id = $1
-      RETURNING ${JOB_COLUMNS}`,
-    [jobId, retryAfterSeconds],
+  const doc = await jobs().findOneAndUpdate(
+    { _id: jobId },
+    [
+      {
+        $set: {
+          status: "queued",
+          attempts: { $max: [{ $subtract: ["$attempts", 1] }, 0] },
+          workerId: null,
+          leaseExpiresAt: null,
+          runAfter: secondsFromNow(retryAfterSeconds),
+          error: null,
+          updatedAt: new Date(),
+        },
+      },
+    ],
+    { returnDocument: "after", projection: JOB_PROJECTION },
   );
-  return rows[0] ? toJob(rows[0]) : null;
+  return doc ? toJob(doc) : null;
 }
 
 export async function getJob(jobId: string): Promise<Job | null> {
-  const { rows } = await query<JobRow>(`SELECT ${JOB_COLUMNS} FROM jobs WHERE id = $1`, [jobId]);
-  return rows[0] ? toJob(rows[0]) : null;
+  const doc = await jobs().findOne({ _id: jobId }, { projection: JOB_PROJECTION });
+  return doc ? toJob(doc) : null;
 }
 
 export async function listJobsForAthlete(athleteId: string): Promise<Job[]> {
-  const { rows } = await query<JobRow>(
-    `SELECT ${JOB_COLUMNS} FROM jobs WHERE athlete_id = $1 ORDER BY created_at DESC`,
-    [athleteId],
-  );
-  return rows.map(toJob);
+  const docs = await jobs()
+    .find({ athleteId }, { projection: JOB_PROJECTION })
+    .sort({ createdAt: -1 })
+    .toArray();
+  return docs.map(toJob);
 }
 
 /** The keyframes/stats/route the worker persisted, for the /render payload. */
@@ -241,12 +248,12 @@ export interface JobArtifacts {
 }
 
 export async function getJobArtifacts(jobId: string): Promise<JobArtifacts | null> {
-  const { rows } = await query<JobArtifacts>(
-    "SELECT keyframes, stats, route FROM jobs WHERE id = $1",
-    [jobId],
+  const doc = await jobs().findOne(
+    { _id: jobId },
+    { projection: { keyframes: 1, stats: 1, route: 1 } },
   );
-  if (!rows[0]) return null;
-  return { keyframes: rows[0].keyframes, stats: rows[0].stats, route: rows[0].route };
+  if (!doc) return null;
+  return { keyframes: doc.keyframes ?? null, stats: doc.stats ?? null, route: doc.route ?? null };
 }
 
 export type { Job, JobStatus };

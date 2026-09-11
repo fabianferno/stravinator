@@ -93,8 +93,20 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
     const page = await browser.newPage({
       viewport: { width: OUTPUT.width, height: OUTPUT.height },
       deviceScaleFactor: 1,
-      extraHTTPHeaders: workerToken ? { "x-worker-token": workerToken } : undefined,
     });
+
+    // The worker token goes only to our own app. `extraHTTPHeaders` would
+    // attach it to every request the page makes, and a custom header on a
+    // cross-origin tile request forces a CORS preflight that Cesium ion
+    // rejects — the scene then dies with "Request has failed".
+    if (workerToken) {
+      const appOrigin = new URL(url).origin;
+      await page.route(
+        (u) => u.origin === appOrigin,
+        (route) =>
+          route.continue({ headers: { ...route.request().headers(), "x-worker-token": workerToken } }),
+      );
+    }
 
     // Surface page errors instead of letting them turn into blank frames.
     const pageErrors: string[] = [];

@@ -23,7 +23,7 @@ jobs:
     env:
       APP_URL: http://localhost:3000
       WORKER_TOKEN: nightly-placeholder-worker-token
-      DATABASE_URL: postgres://postgres:postgres@localhost:55432/stravinator
+      MONGODB_URI: mongodb://localhost:27017/stravinator
       SESSION_SECRET: nightly-placeholder-session-secret
       STRAVA_CLIENT_ID: "0"
       STRAVA_CLIENT_SECRET: nightly-placeholder

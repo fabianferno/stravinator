@@ -1,4 +1,4 @@
-# Local end-to-end stack: Postgres + the render worker.
+# Local end-to-end stack: MongoDB + the render worker.
 #
 # No secrets live in this file. Everything sensitive is read from your shell or
 # a local .env (which is gitignored):
@@ -9,19 +9,14 @@
 # The app itself still runs on the host (`npm run dev`); the worker reaches it
 # via host.docker.internal.
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-stravinator}
+  mongo:
+    image: mongo:7
     ports:
-      # 55432 on the host is what the queue integration tests expect.
-      - "55432:5432"
+      - "${MONGO_PORT:-27017}:27017"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - mongodata:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -31,11 +26,11 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     depends_on:
-      postgres:
+      mongo:
         condition: service_healthy
     environment:
-      # Inside the compose network Postgres is reachable by service name on 5432.
-      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/stravinator}
+      # Inside the compose network Mongo is reachable by service name on 27017.
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/stravinator}
       APP_URL: ${APP_URL:-http://host.docker.internal:3000}
       WORK_DIR: /data
       # Required, no default: must match the app's WORKER_TOKEN.
@@ -50,5 +45,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
+  mongodata:
   workerdata:

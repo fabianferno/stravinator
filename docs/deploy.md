@@ -6,7 +6,7 @@ Two deployables, one database.
 |---|---|---|
 | Next.js app | Vercel | Everything the athlete touches. Serverless is fine. |
 | Render worker | Fly.io or Railway (container) | Headless Chromium + ffmpeg cannot run in a serverless function. |
-| Postgres 16 | Neon / Supabase / Fly Postgres / Railway | Job queue *and* app data. Both sides connect to it. |
+| MongoDB 7 | Atlas (free tier is fine) | Job queue *and* app data. Both sides connect to it. |
 
 The app and the worker never call each other directly except for one thing: the worker loads
 `$APP_URL/render?job=<id>` in Chromium, authenticating with the `x-worker-token` header. Everything
@@ -45,7 +45,7 @@ Every variable in `.env.example`, and who needs it.
 | `STRAVA_CLIENT_SECRET` | ✅ | — | Strava API secret. Secret. |
 | `STRAVA_REDIRECT_URI` | ✅ | — | Must exactly match the callback registered in the Strava app settings, e.g. `https://your-domain/api/auth/strava/callback`. |
 | `NEXT_PUBLIC_CESIUM_ION_TOKEN` | ✅ | ✅ | Cesium ion access token. Public by nature — scope it to the Stravinator asset set and restrict its allowed URLs in the ion dashboard. Without it `/render` draws placeholder wireframe terrain. The worker needs it too, since it renders the same page. |
-| `DATABASE_URL` | ✅ | ✅ | Postgres 16 connection string. Managed providers usually need `?sslmode=require`. |
+| `MONGODB_URI` | ✅ | ✅ | MongoDB connection string. Put the database name in the path (`.../stravinator`); it defaults to `stravinator` otherwise. |
 | `SESSION_SECRET` | ✅ | — | Signing key for the athlete session cookie. Generate with `openssl rand -hex 32`. Rotating it logs everyone out. |
 | `WORKER_TOKEN` | ✅ | ✅ | **Shared secret — the value must be identical on both sides.** The worker sends it as `x-worker-token` when loading `/render`; the app rejects the request without it. Generate with `openssl rand -hex 32`. A mismatch shows up as every job failing during the `rendering` stage. |
 | `APP_URL` | ✅ | ✅ | Public base URL of the app. The worker uses it to build the `/render` URL, so it must be reachable *from the worker container*. |
@@ -56,26 +56,20 @@ Worker-only knobs, not in `.env.example` (all optional):
 |---|---|---|
 | `WORK_DIR` | `/data` in the image | Root for `tile-cache/` and `out/`. Must point at the persistent volume. The app reads `$WORK_DIR/out` too. |
 | `WORKER_ID` | random `worker-xxxxxxxx` | Identifies the worker in queue leases and logs. Set it per instance when running more than one. |
-| `PGPOOL_MAX` | driver default | Postgres pool size. |
+| `MONGO_POOL_MAX` | 10 | MongoDB connection pool size. |
 
 ---
 
-## Database and migrations
+## Database and indexes
 
-Migrations are forward-only plain SQL in `migrations/`, applied by `src/lib/db/migrate.ts` inside a
-transaction each, tracked in `schema_migrations`. They are **not** run automatically on boot — run
-them deliberately, before deploying code that depends on them.
+There is no schema to migrate — documents are created with the shape the code expects. The one
+thing that must exist is the pair of indexes the claim query relies on. `npm run migrate` creates
+them and is idempotent; run it once against a new deployment:
 
 ```bash
-DATABASE_URL='postgres://user:pass@host:5432/stravinator?sslmode=require' npm run migrate
+MONGODB_URI='mongodb+srv://user:pass@cluster.mongodb.net/stravinator' npm run migrate
 ```
 
-Run it from a machine that can reach the production database — your laptop, a Fly release command,
-or a Railway one-off. It is idempotent: already-applied files are skipped, so re-running is safe.
-
-On Fly you can wire it into the deploy so it always runs first:
-
-```toml
 # fly.toml
 [deploy]
   release_command = "npm run migrate"
@@ -89,7 +83,7 @@ On Fly you can wire it into the deploy so it always runs first:
 2. Set every app-column variable above in Project → Settings → Environment Variables.
 3. Update `STRAVA_REDIRECT_URI` **and** the Strava app's registered callback to the production
    domain, and set `APP_URL` to the same origin.
-4. Deploy, then run the migrations against the production database (above).
+4. Deploy, then run `npm run migrate` against the production database (above).
 
 Remember the shared-filesystem constraint: on Vercel, `/api/jobs/[id]/video` cannot see the worker's
 disk. Vercel is only a real option once `publish()` uploads to object storage.
@@ -110,7 +104,7 @@ Requirements wherever you run it:
 - **A persistent volume mounted at `/data`.** Ion terrain and imagery tiles count against the account's streaming quota and the Chromium disk
   cache lives here; losing it on every restart costs real money. Finished MP4s live in `/data/out`.
 - **Memory.** Chromium rendering 1080×1920 WebGL frames wants ~2 GB. 1 GB will OOM mid-render.
-- **One instance to start.** The queue is safe under concurrency (`FOR UPDATE SKIP LOCKED`, leases,
+- **One instance to start.** The queue is safe under concurrency (atomic `findOneAndUpdate` claims, leases,
   heartbeats), so scaling out is fine — but each instance needs its own `WORKER_ID` and, while
   videos are local, its own disk becomes a problem the moment the app talks to the wrong instance.
 - No inbound ports. The worker only makes outbound connections.
@@ -120,7 +114,7 @@ Requirements wherever you run it:
 ```bash
 fly launch --no-deploy --dockerfile Dockerfile.worker
 fly volumes create stravinator_data --size 20   # GB
-fly secrets set DATABASE_URL=... WORKER_TOKEN=... NEXT_PUBLIC_CESIUM_ION_TOKEN=... APP_URL=...
+fly secrets set MONGODB_URI=... WORKER_TOKEN=... NEXT_PUBLIC_CESIUM_ION_TOKEN=... APP_URL=...
 fly deploy
 ```
 
@@ -156,7 +150,7 @@ machine for idleness while a render is in flight.
 
 ## Local end-to-end
 
-`docker-compose.yml` brings up Postgres (host port **55432**, which is what the queue tests expect)
+`docker-compose.yml` brings up MongoDB (host port **27017**, which is what the queue tests expect)
 and the worker. Secrets come from your environment or a gitignored `.env`; none are baked into the
 file.
 
@@ -172,7 +166,7 @@ The worker container reaches the host app through `host.docker.internal:3000`.
 
 ## Verifying a deploy
 
-1. `npm run migrate` reports no pending migrations.
+1. `npm run migrate` reports the indexes ensured.
 2. Worker logs show `[worker-xxxx] up. app=<APP_URL> work=/data`.
 3. Connect Strava, submit a render, and watch the job walk
    `queued → fetching → smoothing → rendering → encoding → done`.
@@ -183,7 +177,7 @@ The worker container reaches the host app through `host.docker.internal:3000`.
 
 ## CI
 
-- `.github/workflows/ci.yml` — every push and PR: typecheck, lint, tests against a real Postgres 16
+- `.github/workflows/ci.yml` — every push and PR: typecheck, lint, tests against a real MongoDB 7
   service container (the run fails if the queue integration tests skip), and `next build`.
 - `.github/workflows/nightly.yml` — nightly end-to-end render, asserted with ffprobe to be H.264
   1080×1920 @ 30fps. There is no Cesium ion token in CI, so it renders **placeholder terrain**: it

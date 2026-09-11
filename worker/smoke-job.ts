@@ -1,5 +1,5 @@
 /**
- * End-to-end smoke test over the REAL job path: seeds a job in Postgres, then
+ * End-to-end smoke test over the REAL job path: seeds a job in MongoDB, then
  * captures it via `/render?job=<id>`, which makes the page fetch its payload
  * from `/api/render/[jobId]` using the worker token.
  *
@@ -7,12 +7,12 @@
  * API route, or the auth header. This one does.
  *
  * Usage:
- *   DATABASE_URL=... WORKER_TOKEN=... APP_URL=... npx tsx worker/smoke-job.ts [frames]
+ *   MONGODB_URI=... WORKER_TOKEN=... APP_URL=... npx tsx worker/smoke-job.ts [frames]
  */
 import { mkdir, stat, rm } from "node:fs/promises";
 import path from "node:path";
 import { captureVideo } from "./capture";
-import { query } from "../src/lib/db/pool";
+import { upsertAthlete } from "../src/lib/db/athletes";
 import { enqueue, setStatus } from "../src/lib/jobs";
 import { buildCameraPath, frameCountFor, toStats, routeFrom } from "../src/lib/track";
 import { loadFixture } from "../src/lib/track/fixtures";
@@ -25,12 +25,12 @@ async function main() {
   await mkdir(DIR, { recursive: true });
 
   const athleteId = `smoke-${Date.now()}`;
-  await query(
-    `INSERT INTO athletes (id, name, avatar_url, access_token, refresh_token, token_expires_at)
-     VALUES ($1, 'Smoke Athlete', NULL, 'a', 'r', now() + interval '6 hours')
-     ON CONFLICT (id) DO NOTHING`,
-    [athleteId],
-  );
+  await upsertAthlete({
+    id: athleteId,
+    name: "Smoke Athlete",
+    avatar: null,
+    tokens: { accessToken: "a", refreshToken: "r", expiresAt: Math.floor(Date.now() / 1000) + 6 * 3600 },
+  });
 
   // Run the real smoothing engine over a real fixture track, so what gets
   // rendered is what the worker would actually produce.

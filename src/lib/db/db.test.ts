@@ -1,11 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { getAthlete, getAthleteTokens, saveAthleteTokens, upsertAthlete } from "./athletes";
-import { appliedMigrations, migrate } from "./migrate";
-import { getPool, query } from "./pool";
-import { postgresAvailable, setupTestDb, teardownTestDb, truncateAll } from "./testdb";
+import { athletes, ensureIndexes, getClient, jobs } from "./client";
+import { mongoAvailable, setupTestDb, teardownTestDb, truncateAll } from "./testdb";
 
-const available = await postgresAvailable();
+const available = await mongoAvailable();
 
 describe.skipIf(!available)("db", () => {
   beforeAll(async () => {
@@ -18,49 +17,22 @@ describe.skipIf(!available)("db", () => {
     await truncateAll();
   });
 
-  describe("pool", () => {
-    it("returns the same pool instance across calls (hot-reload safe)", () => {
-      expect(getPool()).toBe(getPool());
+  describe("client", () => {
+    it("returns the same client instance across calls (hot-reload safe)", () => {
+      expect(getClient()).toBe(getClient());
     });
   });
 
-  describe("migrate", () => {
-    it("records every migration file it applied", async () => {
-      const names = (await appliedMigrations()).map((m) => m.name);
-      expect(names).toContain("001_init.sql");
+  describe("ensureIndexes", () => {
+    it("is idempotent: a second run does not throw", async () => {
+      await expect(ensureIndexes()).resolves.toBeUndefined();
     });
 
-    it("is idempotent: a second run applies nothing", async () => {
-      expect(await migrate()).toEqual([]);
-    });
-
-    it("created the tables and the claim index", async () => {
-      const { rows } = await query<{ tablename: string }>(
-        "SELECT tablename FROM pg_tables WHERE schemaname = current_schema()",
+    it("created the claim index", async () => {
+      const idx = await jobs().indexes();
+      expect(idx.map((i) => i.name)).toEqual(
+        expect.arrayContaining(["jobs_status_created_at_idx", "jobs_athlete_created_at_idx"]),
       );
-      const tables = rows.map((r) => r.tablename);
-      expect(tables).toEqual(
-        expect.arrayContaining(["athletes", "jobs", "invites", "schema_migrations"]),
-      );
-
-      const { rows: idx } = await query<{ indexname: string }>(
-        "SELECT indexname FROM pg_indexes WHERE tablename = 'jobs' AND schemaname = current_schema()",
-      );
-      expect(idx.map((r) => r.indexname)).toContain("jobs_status_created_at_idx");
-    });
-
-    it("rejects a status outside the JobStatus union", async () => {
-      await upsertAthlete({
-        id: "a1",
-        name: "A",
-        avatar: null,
-        tokens: { accessToken: "x", refreshToken: "y", expiresAt: 1_800_000_000 },
-      });
-      await expect(
-        query("INSERT INTO jobs (athlete_id, activity_id, status) VALUES ($1, '1', 'bogus')", [
-          "a1",
-        ]),
-      ).rejects.toThrow();
     });
   });
 
@@ -91,8 +63,7 @@ describe.skipIf(!available)("db", () => {
       const a = await getAthlete("a1");
       expect(a?.name).toBe("Ada L");
       expect(a?.tokens.refreshToken).toBe("ref2");
-      const { rows } = await query<{ n: string }>("SELECT count(*) AS n FROM athletes");
-      expect(Number(rows[0].n)).toBe(1);
+      expect(await athletes().countDocuments()).toBe(1);
     });
 
     // Strava rotates the refresh token; losing the new one strands the athlete.
@@ -121,29 +92,6 @@ describe.skipIf(!available)("db", () => {
 
     it("getAthlete returns null for an unknown athlete", async () => {
       expect(await getAthlete("nope")).toBeNull();
-    });
-  });
-
-  describe("invites", () => {
-    it("stores a code and marks it used by an athlete", async () => {
-      await upsertAthlete({
-        id: "a1",
-        name: "Ada",
-        avatar: null,
-        tokens: { accessToken: "x", refreshToken: "y", expiresAt: 1_800_000_000 },
-      });
-      await query("INSERT INTO invites (code) VALUES ('LETMEIN')");
-      await query("UPDATE invites SET used_by = 'a1', used_at = now() WHERE code = 'LETMEIN'");
-      const { rows } = await query<{ used_by: string; used_at: Date }>(
-        "SELECT used_by, used_at FROM invites WHERE code = 'LETMEIN'",
-      );
-      expect(rows[0].used_by).toBe("a1");
-      expect(rows[0].used_at).toBeInstanceOf(Date);
-    });
-
-    it("rejects a duplicate code", async () => {
-      await query("INSERT INTO invites (code) VALUES ('DUPE')");
-      await expect(query("INSERT INTO invites (code) VALUES ('DUPE')")).rejects.toThrow();
     });
   });
 });

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   expireLease,
-  postgresAvailable,
+  mongoAvailable,
   readLease,
   readRunAfter,
   seedAthlete,
@@ -26,7 +26,7 @@ import {
   setStatus,
 } from "./queue";
 
-const available = await postgresAvailable();
+const available = await mongoAvailable();
 
 describe.skipIf(!available)("jobs/queue", () => {
   let athleteId: string;

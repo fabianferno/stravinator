@@ -139,7 +139,11 @@ export function createCesiumEngine(input: SceneInput, token: string): SceneEngin
       terrain.errorEvent.addEventListener((e: unknown) => reject(asError(e)));
     });
     const carto = route.map(([lng, lat]) => Cartographic.fromDegrees(lng, lat));
-    await sampleTerrainMostDetailed(provider, carto);
+    try {
+      await sampleTerrainMostDetailed(provider, carto);
+    } catch (e) {
+      throw asError(e);
+    }
     routeCartesian = carto.map((c) =>
       Cartesian3.fromRadians(c.longitude, c.latitude, (c.height ?? 0) + TRAIL_LIFT_M),
     );
@@ -310,6 +314,12 @@ function waitSettled(viewer: Viewer, timeoutMs: number, frame: number): Promise<
 
 function asError(e: unknown): Error {
   if (e instanceof Error) return e;
-  const maybe = e as { message?: string };
+  // Cesium's RequestErrorEvent stringifies to "Request has failed." — keep the
+  // status and URL so a rejected tile is diagnosable from the job's error.
+  const maybe = e as { message?: string; statusCode?: number; response?: unknown };
+  if (maybe?.statusCode !== undefined) {
+    const body = typeof maybe.response === "string" ? maybe.response.slice(0, 200) : "";
+    return new Error(`ion request failed with HTTP ${maybe.statusCode} ${body}`.trim());
+  }
   return new Error(maybe?.message ?? String(e));
 }

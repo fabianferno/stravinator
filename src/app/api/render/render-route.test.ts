@@ -11,7 +11,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
-  postgresAvailable,
+  mongoAvailable,
   seedAthlete,
   setupTestDb,
   teardownTestDb,
@@ -20,7 +20,7 @@ import {
 import { enqueue, setStatus } from "@/lib/jobs";
 import type { ActivityStats, CameraKeyframe, LngLat } from "@/lib/types";
 
-const available = await postgresAvailable();
+const available = await mongoAvailable();
 
 const WORKER_TOKEN = "test-worker-token";
 

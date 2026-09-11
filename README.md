@@ -14,11 +14,11 @@ One preset, zero knobs.
 
 A Next.js app handles everything the athlete touches. A separate long-running worker does the
 rendering, because headless Chromium and ffmpeg cannot run in a serverless function. They
-communicate through a Postgres job queue.
+communicate through a MongoDB job queue.
 
 ```
 Next.js                          Worker
-├─ Strava OAuth (own data only)  ├─ claims a job (FOR UPDATE SKIP LOCKED)
+├─ Strava OAuth (own data only)  ├─ claims a job (atomic findOneAndUpdate)
 ├─ Activity picker               ├─ fetches track, smooths it into a camera path
 ├─ Job submit → queue            ├─ steps /render frame by frame (Playwright)
 └─ Status poll → download        └─ pipes PNGs to ffmpeg → MP4
@@ -39,10 +39,9 @@ npm install
 npx playwright install chromium
 cp .env.example .env.local     # then fill it in
 
-# Postgres (any instance works; this is the quickest)
-docker run -d --name stravinator-pg -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=stravinator -p 55432:5432 postgres:16-alpine
-DATABASE_URL=postgres://postgres:postgres@localhost:55432/stravinator npm run migrate
+# MongoDB (Atlas or local; this is the quickest local option)
+docker run -d --name stravinator-mongo -p 27017:27017 mongo:7
+MONGODB_URI=mongodb://localhost:27017/stravinator npm run migrate   # creates the indexes
 
 npm run dev      # app on :3000
 npm run worker   # render worker, in a second terminal
@@ -54,11 +53,11 @@ npm run worker   # render worker, in a second terminal
 ```bash
 npm test                                  # unit + queue integration
 npx tsx worker/smoke.ts 60                # scene → ffmpeg, using the built-in fixture payload
-npx tsx worker/smoke-job.ts 45            # the full path: Postgres job → API route → capture
+npx tsx worker/smoke-job.ts 45            # the full path: Mongo job → API route → capture
 ```
 
-The queue tests need Postgres and skip with a printed message if none is reachable. Both smoke
-tests need a dev server running; `smoke-job.ts` additionally needs `DATABASE_URL` and a
+The queue tests need MongoDB and skip with a printed message if none is reachable. Both smoke
+tests need a dev server running; `smoke-job.ts` additionally needs `MONGODB_URI` and a
 `WORKER_TOKEN` matching the server's.
 
 ## Known gaps
