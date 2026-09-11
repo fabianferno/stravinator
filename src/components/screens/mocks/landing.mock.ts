@@ -6,5 +6,4 @@ export const landingMock: LandingScreenProps = {
   runsFlown: 12,
   elevationClimbed: 4180,
   connectHref: "/activities",
-  alreadyInvited: false,
 };

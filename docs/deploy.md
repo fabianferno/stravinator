@@ -47,7 +47,6 @@ Every variable in `.env.example`, and who needs it.
 | `NEXT_PUBLIC_CESIUM_ION_TOKEN` | ✅ | ✅ | Cesium ion access token. Public by nature — scope it to the Stravinator asset set and restrict its allowed URLs in the ion dashboard. Without it `/render` draws placeholder wireframe terrain. The worker needs it too, since it renders the same page. |
 | `DATABASE_URL` | ✅ | ✅ | Postgres 16 connection string. Managed providers usually need `?sslmode=require`. |
 | `SESSION_SECRET` | ✅ | — | Signing key for the athlete session cookie. Generate with `openssl rand -hex 32`. Rotating it logs everyone out. |
-| `INVITE_CODES` | ✅ | — | Comma-separated invite codes. **Empty means nobody can sign in.** |
 | `WORKER_TOKEN` | ✅ | ✅ | **Shared secret — the value must be identical on both sides.** The worker sends it as `x-worker-token` when loading `/render`; the app rejects the request without it. Generate with `openssl rand -hex 32`. A mismatch shows up as every job failing during the `rendering` stage. |
 | `APP_URL` | ✅ | ✅ | Public base URL of the app. The worker uses it to build the `/render` URL, so it must be reachable *from the worker container*. |
 
@@ -175,7 +174,7 @@ The worker container reaches the host app through `host.docker.internal:3000`.
 
 1. `npm run migrate` reports no pending migrations.
 2. Worker logs show `[worker-xxxx] up. app=<APP_URL> work=/data`.
-3. Sign in with an invite code, submit a render, and watch the job walk
+3. Connect Strava, submit a render, and watch the job walk
    `queued → fetching → smoothing → rendering → encoding → done`.
 4. Download the MP4. If the job reaches `done` but the download 404s, the app cannot see
    `$WORK_DIR/out` — see the shared-filesystem constraint at the top.

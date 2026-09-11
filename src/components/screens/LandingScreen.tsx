@@ -12,7 +12,7 @@ import {
 import { DotMatrix } from "@/components/DotMatrix";
 import { RouteBed } from "@/components/RouteBed";
 import { ClockIcon, MenuIcon, PlusIcon } from "@/components/icons";
-import { InviteForm } from "./InviteForm";
+import { ConnectForm } from "./ConnectForm";
 
 export interface LandingScreenProps {
   /** The athlete's most recent flyover. `null` for a brand-new visitor. */
@@ -26,7 +26,6 @@ export interface LandingScreenProps {
   elevationClimbed: number;
   /** OAuth start route. */
   connectHref: string;
-  alreadyInvited?: boolean;
 }
 
 export function LandingScreen({
@@ -34,7 +33,6 @@ export function LandingScreen({
   runsFlown,
   elevationClimbed,
   connectHref,
-  alreadyInvited,
 }: LandingScreenProps) {
   const distanceKm = lastFlyover ? (lastFlyover.distance / 1000).toFixed(1) : "0.0";
 
@@ -80,9 +78,9 @@ export function LandingScreen({
         </StatPair>
       </div>
 
-      <InviteForm connectHref={connectHref} alreadyInvited={alreadyInvited} />
+      <ConnectForm connectHref={connectHref} />
       <div className="dock dock-footer">
-        <Attribution note="Invite-only beta" className="attrib-note" />
+        <Attribution note="Beta" className="attrib-note" />
       </div>
     </div>
   );

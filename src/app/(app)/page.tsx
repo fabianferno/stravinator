@@ -5,7 +5,7 @@ import { getAthleteId } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
-  // An athlete who is already connected has no use for the invite gate.
+  // An athlete who is already connected skips the landing page.
   if (await getAthleteId()) redirect("/activities");
 
   return (

@@ -12,7 +12,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Stravinator — 3D flyovers of your Strava runs",
   description:
-    "Turn a Strava activity into a vertical 3D flyover video you can post. Invite-only beta.",
+    "Turn a Strava activity into a vertical 3D flyover video you can post.",
 };
 
 export const viewport: Viewport = {

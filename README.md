@@ -4,7 +4,7 @@ Turns a Strava activity into a cinematic 3D flyover video, ready to post to Inst
 Stories. Connect Strava, pick one of your own runs, get back a 1080×1920 MP4 of a camera flying the
 route over 3D terrain with a data HUD.
 
-Invite-only beta. One preset, zero knobs.
+One preset, zero knobs.
 
 - **Spec:** `docs/superpowers/specs/2026-08-08-stravinator-design.md`
 - **Plan:** `docs/superpowers/plans/2026-08-08-stravinator-build.md`
@@ -48,7 +48,6 @@ npm run dev      # app on :3000
 npm run worker   # render worker, in a second terminal
 ```
 
-`INVITE_CODES` is a comma-separated list; without it, nobody can sign in.
 
 ## Testing
 
