@@ -39,10 +39,13 @@ import {
 } from "cesium";
 import { LIME, nextPaint, trailFor, type SceneEngine, type SceneInput } from "./engine";
 import { cameraRangeMetres, cesiumPitchRad, VERTICAL_FOV_RAD } from "./cesiumCamera";
-import type { CameraKeyframe } from "@/lib/types";
 
-/** Required by ion's terms for World Terrain + Bing imagery; burned into the HUD. */
-export const CESIUM_ATTRIBUTION = ["© Cesium ion", "© Microsoft Bing", "© Maxar"] as const;
+/**
+ * This module is imported with a dynamic `import()` from the render page, never
+ * statically: the Cesium bundle is browser-only and breaks Next's server
+ * prerender if it lands in an SSR chunk.
+ */
+import type { CameraKeyframe } from "@/lib/types";
 
 /** Where `scripts/copy-cesium-assets.mjs` puts the workers and shaders. */
 const CESIUM_BASE_URL = "/cesium";

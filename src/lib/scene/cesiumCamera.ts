@@ -7,6 +7,9 @@
  * of Cesium imports so the numbers can be unit-tested.
  */
 
+/** Required by ion's terms for World Terrain + Bing imagery; burned into the HUD. */
+export const CESIUM_ATTRIBUTION = ["© Cesium ion", "© Microsoft Bing", "© Maxar"] as const;
+
 /** Equatorial circumference of the WGS84 ellipsoid, metres. */
 const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
 /** Web-Mercator tile size the zoom level is defined against. */

@@ -117,10 +117,13 @@ export async function captureVideo(opts: CaptureOptions): Promise<string> {
     // Wait for the flag the page sets, not for `window.sceneReady` directly:
     // evaluating a promise that does not exist yet resolves to undefined
     // immediately, which looks like success and yields a blank video.
+    // The budget must exceed the scene's own cold-start timeout (180 s in
+    // cesiumEngine.ts) so the page, not this driver, decides that a start
+    // has failed and says why.
     await page.waitForFunction(
       () => document.body.dataset.sceneReady === "1" || !!document.body.dataset.sceneError,
       undefined,
-      { timeout: 120_000 },
+      { timeout: 240_000 },
     );
 
     const sceneError = await page.evaluate(() => document.body.dataset.sceneError);

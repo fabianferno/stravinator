@@ -7,7 +7,7 @@
  * API route, or the auth header. This one does.
  *
  * Usage:
- *   MONGODB_URI=... WORKER_TOKEN=... APP_URL=... npx tsx worker/smoke-job.ts [frames]
+ *   MONGODB_URI=... WORKER_TOKEN=... APP_URL=... pnpm exec tsx worker/smoke-job.ts [frames]
  */
 import { mkdir, stat, rm } from "node:fs/promises";
 import path from "node:path";

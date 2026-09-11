@@ -35,25 +35,25 @@ Next.js                          Worker
 ## Running it
 
 ```bash
-npm install
-npx playwright install chromium
+pnpm install      # also copies Cesium runtime assets into public/cesium
+pnpm exec playwright install chromium
 cp .env.example .env.local     # then fill it in
 
 # MongoDB (Atlas or local; this is the quickest local option)
 docker run -d --name stravinator-mongo -p 27017:27017 mongo:7
-MONGODB_URI=mongodb://localhost:27017/stravinator npm run migrate   # creates the indexes
+MONGODB_URI=mongodb://localhost:27017/stravinator pnpm migrate   # creates the indexes
 
-npm run dev      # app on :3000
-npm run worker   # render worker, in a second terminal
+pnpm dev      # app on :3000
+pnpm worker   # render worker, in a second terminal
 ```
 
 
 ## Testing
 
 ```bash
-npm test                                  # unit + queue integration
-npx tsx worker/smoke.ts 60                # scene → ffmpeg, using the built-in fixture payload
-npx tsx worker/smoke-job.ts 45            # the full path: Mongo job → API route → capture
+pnpm test                                  # unit + queue integration
+pnpm exec tsx worker/smoke.ts 60                # scene → ffmpeg, using the built-in fixture payload
+pnpm exec tsx worker/smoke-job.ts 45            # the full path: Mongo job → API route → capture
 ```
 
 The queue tests need MongoDB and skip with a printed message if none is reachable. Both smoke

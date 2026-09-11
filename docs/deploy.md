@@ -63,16 +63,16 @@ Worker-only knobs, not in `.env.example` (all optional):
 ## Database and indexes
 
 There is no schema to migrate — documents are created with the shape the code expects. The one
-thing that must exist is the pair of indexes the claim query relies on. `npm run migrate` creates
+thing that must exist is the pair of indexes the claim query relies on. `pnpm migrate` creates
 them and is idempotent; run it once against a new deployment:
 
 ```bash
-MONGODB_URI='mongodb+srv://user:pass@cluster.mongodb.net/stravinator' npm run migrate
+MONGODB_URI='mongodb+srv://user:pass@cluster.mongodb.net/stravinator' pnpm migrate
 ```
 
 # fly.toml
 [deploy]
-  release_command = "npm run migrate"
+  release_command = "pnpm migrate"
 ```
 
 ---
@@ -83,7 +83,7 @@ MONGODB_URI='mongodb+srv://user:pass@cluster.mongodb.net/stravinator' npm run mi
 2. Set every app-column variable above in Project → Settings → Environment Variables.
 3. Update `STRAVA_REDIRECT_URI` **and** the Strava app's registered callback to the production
    domain, and set `APP_URL` to the same origin.
-4. Deploy, then run `npm run migrate` against the production database (above).
+4. Deploy, then run `pnpm migrate` against the production database (above).
 
 Remember the shared-filesystem constraint: on Vercel, `/api/jobs/[id]/video` cannot see the worker's
 disk. Vercel is only a real option once `publish()` uploads to object storage.
@@ -93,7 +93,7 @@ disk. Vercel is only a real option once `publish()` uploads to object storage.
 ## The worker as a container
 
 Build the image from `Dockerfile.worker` (Playwright's Chromium — the full build, not the headless
-shell — plus ffmpeg, Node 22, entrypoint `npm run worker`).
+shell — plus ffmpeg, Node 22, entrypoint `pnpm worker`).
 
 ```bash
 docker build -f Dockerfile.worker -t stravinator-worker .
@@ -157,7 +157,7 @@ file.
 ```bash
 cp .env.example .env && $EDITOR .env     # WORKER_TOKEN is required
 docker compose up --build
-npm run dev                              # the app still runs on the host, :3000
+pnpm dev                              # the app still runs on the host, :3000
 ```
 
 The worker container reaches the host app through `host.docker.internal:3000`.
@@ -166,7 +166,7 @@ The worker container reaches the host app through `host.docker.internal:3000`.
 
 ## Verifying a deploy
 
-1. `npm run migrate` reports the indexes ensured.
+1. `pnpm migrate` reports the indexes ensured.
 2. Worker logs show `[worker-xxxx] up. app=<APP_URL> work=/data`.
 3. Connect Strava, submit a render, and watch the job walk
    `queued → fetching → smoothing → rendering → encoding → done`.

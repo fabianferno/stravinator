@@ -3,7 +3,7 @@
  * driver and the real encoder, and checks a playable MP4 comes out.
  *
  * Needs a dev server running. Usage:
- *   APP_URL=http://localhost:3000 npx tsx worker/smoke.ts [frames]
+ *   APP_URL=http://localhost:3000 pnpm exec tsx worker/smoke.ts [frames]
  */
 import { mkdir, stat, rm } from "node:fs/promises";
 import path from "node:path";

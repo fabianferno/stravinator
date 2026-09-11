@@ -24,16 +24,19 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 # Dependencies first so a source-only change does not reinstall the world.
-COPY package.json package-lock.json ./
-# devDependencies are required at runtime: the worker runs through `tsx`, and
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY scripts/ ./scripts/
+RUN corepack enable && corepack prepare pnpm@12.3.4 --activate
+# devDependencies are required at runtime (hence --prod=false under
+# NODE_ENV=production): the worker runs through `tsx`, and
 # Playwright itself is a devDependency.
-RUN npm ci --include=dev
+RUN pnpm install --frozen-lockfile --prod=false
 
 # worker/capture.ts launches with `channel: "chromium"` — the full Chromium
 # build, not chromium-headless-shell, whose WebGL is too weak for 3D terrain.
 # `playwright install chromium` provides exactly that channel. `--with-deps`
 # installs the system libraries Chromium needs, which the slim base lacks.
-RUN npx playwright install --with-deps chromium \
+RUN pnpm exec playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
@@ -44,4 +47,4 @@ COPY . .
 RUN mkdir -p /data/tile-cache /data/out
 VOLUME ["/data"]
 
-CMD ["npm", "run", "worker"]
+CMD ["pnpm", "worker"]

@@ -32,22 +32,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.3.4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
       - name: Lint
-        run: npx eslint .
+        run: pnpm exec eslint .
 
       - name: Test
-        run: npm test 2>&1 | tee test-output.log
+        run: pnpm test 2>&1 | tee test-output.log
 
       # The queue/db suites skip themselves (loudly) when MongoDB is
       # unreachable. A green-but-skipped run would silently stop testing the
@@ -84,4 +88,4 @@ jobs:
           NEXT_PUBLIC_CESIUM_ION_TOKEN: ""
           WORKER_TOKEN: ci-placeholder-worker-token
           APP_URL: http://localhost:3000
-        run: npx next build
+        run: pnpm exec next build

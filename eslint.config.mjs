@@ -15,6 +15,10 @@ const eslintConfig = defineConfig([
     // Vendored MapLibre worker bundle, copied verbatim from node_modules and
     // served from /public. Not our code; see src/lib/scene/maplibreEngine.ts.
     "public/maplibre/**",
+    // CesiumJS runtime assets, copied by scripts/copy-cesium-assets.mjs on
+    // install. Not our code either.
+    "public/cesium/**",
+    ".worker/**",
   ]),
 ]);
 

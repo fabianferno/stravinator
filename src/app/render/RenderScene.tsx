@@ -10,7 +10,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { ATTRIBUTION, OUTPUT, type RenderPayload } from "@/lib/types";
 import { loadPayload } from "@/lib/scene/payload";
-import { createCesiumEngine, CESIUM_ATTRIBUTION } from "@/lib/scene/cesiumEngine";
+import { CESIUM_ATTRIBUTION } from "@/lib/scene/cesiumCamera";
 import { createMaplibreEngine, MAPTERHORN_ATTRIBUTION } from "@/lib/scene/maplibreEngine";
 import { createStylizedEngine } from "@/lib/scene/stylizedEngine";
 import { createPlaceholderEngine } from "@/lib/scene/placeholderEngine";
@@ -65,13 +65,19 @@ function attributionFor(engine: EngineName | null): readonly string[] {
   }
 }
 
-function createEngine(engine: EngineName, input: SceneInput, token: string | undefined): SceneEngine {
+async function createEngine(
+  engine: EngineName,
+  input: SceneInput,
+  token: string | undefined,
+): Promise<SceneEngine> {
   switch (engine) {
     case "cesium":
       if (!token) {
         throw new Error("engine=cesium requires NEXT_PUBLIC_CESIUM_ION_TOKEN to be set");
       }
-      return createCesiumEngine(input, token);
+      // Loaded on demand: Cesium is browser-only and must stay out of the
+      // server bundle (see cesiumEngine.ts).
+      return (await import("@/lib/scene/cesiumEngine")).createCesiumEngine(input, token);
     case "maplibre":
       return createMaplibreEngine(input);
     case "stylized":
@@ -169,7 +175,7 @@ export default function RenderScene() {
         // explicitly.
         const chosen = parseEngine(requestedEngine) ?? (token ? "cesium" : "placeholder");
         flushSync(() => setEngineName(chosen));
-        engine = createEngine(chosen, input, token);
+        engine = await createEngine(chosen, input, token);
 
         await engine.ready;
         if (cancelled) return;

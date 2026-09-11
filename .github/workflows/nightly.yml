@@ -33,13 +33,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.3.4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install ffmpeg
         run: |
@@ -49,14 +53,14 @@ jobs:
       # `channel: "chromium"` in worker/capture.ts needs the full Chromium
       # build, not chromium-headless-shell.
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Build app
-        run: npx next build
+        run: pnpm exec next build
 
       - name: Start app
         run: |
-          npm start > app.log 2>&1 &
+          pnpm start > app.log 2>&1 &
           echo $! > app.pid
           for i in $(seq 1 60); do
             if curl -sf -o /dev/null "$APP_URL"; then
@@ -70,7 +74,7 @@ jobs:
           exit 1
 
       - name: Render 60 frames
-        run: npx tsx worker/smoke.ts 60
+        run: pnpm exec tsx worker/smoke.ts 60
 
       - name: Assert the MP4 is H.264 1080x1920 @ 30fps
         run: |
