@@ -30,7 +30,6 @@ import {
   JulianDate,
   Matrix4,
   PerspectiveFrustum,
-  PolylineGlowMaterialProperty,
   sampleTerrainMostDetailed,
   Terrain,
   type TerrainProvider,
@@ -45,13 +44,21 @@ import { cameraRangeMetres, cesiumPitchRad, VERTICAL_FOV_RAD } from "./cesiumCam
  * statically: the Cesium bundle is browser-only and breaks Next's server
  * prerender if it lands in an SSR chunk.
  */
-import type { CameraKeyframe } from "@/lib/types";
+import type { CameraKeyframe, LngLat } from "@/lib/types";
 
 /** Where `scripts/copy-cesium-assets.mjs` puts the workers and shaders. */
 const CESIUM_BASE_URL = "/cesium";
 
 /** Metres the trail floats above the terrain so it never z-fights the mesh. */
 const TRAIL_LIFT_M = 3;
+
+/**
+ * Route points closer than this to the last kept point are dropped before the
+ * trail is built. GPS jitter while standing still produces clusters of
+ * back-and-forth segments a metre apart; a wide polyline through a hairpin
+ * that tight explodes into a star of miter spikes.
+ */
+const TRAIL_MIN_SEGMENT_M = 6;
 
 /** Budget for the very first frame, which also loads the globe's coarse levels. */
 const COLD_START_TIMEOUT_MS = 180_000;
@@ -133,6 +140,22 @@ export function createCesiumEngine(input: SceneInput, token: string): SceneEngin
   // render rather than something that depends on which tiles happen to be
   // loaded at frame i.
   let routeCartesian: Cartesian3[] = [];
+  // For each original route index, how many thinned points precede it — so a
+  // `routeProgressIndex` from the track engine still slices the right length.
+  const keptBefore: number[] = [];
+  const keep: number[] = [];
+  {
+    let last: LngLat | null = null;
+    for (let i = 0; i < route.length; i++) {
+      const p = route[i];
+      const isLast = i === route.length - 1;
+      if (last === null || isLast || metresBetween(last, p) >= TRAIL_MIN_SEGMENT_M) {
+        keep.push(i);
+        last = p;
+      }
+      keptBefore.push(keep.length);
+    }
+  }
   let glow: Entity | null = null;
   let core: Entity | null = null;
 
@@ -141,7 +164,7 @@ export function createCesiumEngine(input: SceneInput, token: string): SceneEngin
       terrain.readyEvent.addEventListener((p: TerrainProvider) => resolve(p));
       terrain.errorEvent.addEventListener((e: unknown) => reject(asError(e)));
     });
-    const carto = route.map(([lng, lat]) => Cartographic.fromDegrees(lng, lat));
+    const carto = keep.map((i) => Cartographic.fromDegrees(route[i][0], route[i][1]));
     try {
       await sampleTerrainMostDetailed(provider, carto);
     } catch (e) {
@@ -151,18 +174,20 @@ export function createCesiumEngine(input: SceneInput, token: string): SceneEngin
       Cartesian3.fromRadians(c.longitude, c.latitude, (c.height ?? 0) + TRAIL_LIFT_M),
     );
 
+    // Two plain colour lines, not the glow material: the glow shader stretches
+    // its falloff along the miter at sharp joins and reads as a spike.
     const lime = Color.fromCssColorString(LIME);
     glow = viewer.entities.add({
       polyline: {
         positions: trailPositions(routeProgressIndex[0] ?? 1),
-        width: 24,
-        material: new PolylineGlowMaterialProperty({ color: lime.withAlpha(0.55), glowPower: 0.35 }),
+        width: 12,
+        material: lime.withAlpha(0.28),
       },
     });
     core = viewer.entities.add({
       polyline: {
         positions: trailPositions(routeProgressIndex[0] ?? 1),
-        width: 6,
+        width: 4,
         material: lime,
       },
     });
@@ -177,7 +202,8 @@ export function createCesiumEngine(input: SceneInput, token: string): SceneEngin
   })();
 
   function trailPositions(upTo: number): Cartesian3[] {
-    const n = trailFor(route, upTo).length;
+    const lastOriginal = trailFor(route, upTo).length - 1;
+    const n = Math.max(2, keptBefore[lastOriginal] ?? 0);
     return routeCartesian.slice(0, n);
   }
 
@@ -249,15 +275,17 @@ function clearanceHeight(viewer: Viewer, kf: CameraKeyframe): number | null {
   const mPerDegLat = 110574;
   const mPerDegLng = 111320 * Math.cos((lat * Math.PI) / 180);
   let ahead = here;
-  for (let d = 130; d <= 2600; d += 130) {
+  for (let d = 100; d <= 1200; d += 100) {
     const h = globe.getHeight(
       Cartographic.fromDegrees(lng + (d * Math.sin(rad)) / mPerDegLng, lat + (d * Math.cos(rad)) / mPerDegLat),
     );
     if (h !== undefined && h > ahead) ahead = h;
   }
-  // Headroom above the highest ground in the near view — same clearance the
-  // MapLibre engine settled on for the fixture's alpine climb.
-  return Math.max(here, ahead + 180);
+  // Headroom above the highest ground in the near view. The look-ahead is
+  // shorter than MapLibre's and the headroom lower: with the camera ~3.5 km
+  // out, ridges further than that are already behind the horizon line of
+  // sight, and every metre of lift here pushes the whole shot towards a map.
+  return Math.max(here, ahead + 60);
 }
 
 /**
@@ -313,6 +341,12 @@ function waitSettled(viewer: Viewer, timeoutMs: number, frame: number): Promise<
 
     scene.requestRender();
   });
+}
+
+function metresBetween(a: LngLat, b: LngLat): number {
+  const dLat = (b[1] - a[1]) * 110574;
+  const dLng = (b[0] - a[0]) * 111320 * Math.cos((a[1] * Math.PI) / 180);
+  return Math.hypot(dLat, dLng);
 }
 
 function asError(e: unknown): Error {

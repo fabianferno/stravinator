@@ -384,8 +384,8 @@ describe.each(RENDERABLE_FIXTURES)("buildCameraPath over %s", (name) => {
     }
     expect(PITCH).toBeGreaterThanOrEqual(60);
     expect(PITCH).toBeLessThanOrEqual(70);
-    expect(ZOOM).toBeGreaterThanOrEqual(14);
-    expect(ZOOM).toBeLessThanOrEqual(15);
+    expect(ZOOM).toBeGreaterThanOrEqual(15);
+    expect(ZOOM).toBeLessThanOrEqual(16);
   });
 
   it("advances at a near-constant distance per frame", () => {

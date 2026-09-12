@@ -17,12 +17,12 @@ import { isFiniteNumber } from "./geo";
 export const PITCH = 65;
 
 /**
- * Mapbox zoom. 14.5 is roughly a 1-2 km visible span at this pitch — the
- * route reads as a route rather than a squiggle, and terrain tiles are
- * available at full detail. Lower and the athlete is a dot; higher and the
- * camera outruns the tile budget.
+ * Web-Mercator zoom. 15.5 puts the camera ~3.5 km from the point it looks at
+ * (see scene/cesiumCamera.ts), which at this pitch is a helicopter chase —
+ * the trail is a ribbon on the ground, not a squiggle on a map. 14.5 was
+ * tried first and framed a 12 km run in the bottom third of the frame.
  */
-export const ZOOM = 14.5;
+export const ZOOM = 15.5;
 
 export interface AssembleInput {
   spline: Spline;

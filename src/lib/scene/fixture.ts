@@ -75,7 +75,7 @@ function buildKeyframes(): CameraKeyframe[] {
       center,
       bearing: round6(bearing),
       pitch: 68,
-      zoom: 14.6,
+      zoom: 15.5,
       // A plausible climb profile: 1035 m at the trailhead to ~1720 m at the col.
       elevation: Math.round(1035 + 685 * u),
       progress: round6(progress),
