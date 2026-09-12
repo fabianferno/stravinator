@@ -97,7 +97,14 @@ async function runJob(job: { id: string; athleteId: string; activityId: string }
       outPath,
       tileCacheDir: TILE_CACHE_DIR,
       onProgress: async (frame, total) => {
-        await jobs.setStatus(job.id, "rendering", { framesDone: frame, progress: frame / total });
+        // Progress is cosmetic. A blip talking to the database must not
+        // abort a render that is otherwise fine; the heartbeat keeps the
+        // lease alive and the next update will catch up.
+        try {
+          await jobs.setStatus(job.id, "rendering", { framesDone: frame, progress: frame / total });
+        } catch (err) {
+          console.warn(`[${WORKER_ID}] job ${job.id}: progress update failed (continuing):`, errMessage(err));
+        }
       },
     });
 
@@ -115,19 +122,53 @@ async function runJob(job: { id: string; athleteId: string; activityId: string }
   }
 }
 
+/** Seconds a job waits after an infrastructure blip before it is claimable again. */
+const INFRA_RETRY_SECONDS = 30;
+
 async function handleFailure(jobId: string, err: unknown) {
   const jobs = await import("../src/lib/jobs");
   const { StravaRateLimitError } = await import("../src/lib/strava");
 
-  // Rate limiting is not this job's fault, so it must not burn an attempt.
-  if (err instanceof StravaRateLimitError) {
-    console.warn(`[${WORKER_ID}] job ${jobId} hit the Strava rate limit; requeueing.`);
-    await jobs.requeueForRateLimit(jobId, err.retryAfterSec ?? 900);
-    return;
-  }
+  try {
+    // Rate limiting is not this job's fault, so it must not burn an attempt.
+    if (err instanceof StravaRateLimitError) {
+      console.warn(`[${WORKER_ID}] job ${jobId} hit the Strava rate limit; requeueing.`);
+      await jobs.requeueForRateLimit(jobId, err.retryAfterSec ?? 900);
+      return;
+    }
 
-  console.error(`[${WORKER_ID}] job ${jobId} failed:`, err);
-  await jobs.fail(jobId, userFacingReason(err));
+    // Neither is losing the database or the network for a moment. Give the
+    // attempt back and let the job go again shortly.
+    if (isInfrastructureError(err)) {
+      console.warn(`[${WORKER_ID}] job ${jobId} hit an infrastructure error; requeueing:`, errMessage(err));
+      await jobs.requeueForRateLimit(jobId, INFRA_RETRY_SECONDS);
+      return;
+    }
+
+    console.error(`[${WORKER_ID}] job ${jobId} failed:`, err);
+    await jobs.fail(jobId, userFacingReason(err));
+  } catch (recordErr) {
+    // If the failure itself cannot be recorded the database is unreachable.
+    // Do not take the worker down with it: the lease expires on its own and
+    // the job is reclaimed once the database is back.
+    console.error(`[${WORKER_ID}] job ${jobId}: could not record failure (lease will expire):`, errMessage(recordErr));
+  }
+}
+
+/** Database and network outages, as opposed to anything wrong with the job. */
+function isInfrastructureError(err: unknown): boolean {
+  const name = err instanceof Error ? err.name : "";
+  const msg = errMessage(err);
+  return (
+    name.startsWith("MongoServerSelection") ||
+    name.startsWith("MongoNetwork") ||
+    name === "MongoTopologyClosedError" ||
+    /ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN/.test(msg)
+  );
+}
+
+function errMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 /** Never leak a stack trace into the UI. */

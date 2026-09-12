@@ -71,7 +71,9 @@ export function getClient(): MongoClient {
 
   const client = new MongoClient(uri, {
     maxPoolSize: Number(process.env.MONGO_POOL_MAX ?? 10),
-    serverSelectionTimeoutMS: 10_000,
+    // Long enough to ride out a DNS or connection blip to Atlas mid-render;
+    // the driver's retryable reads/writes handle the individual operations.
+    serverSelectionTimeoutMS: 30_000,
   });
   holder[GLOBAL_KEY] = { client, uri, dbName };
   return client;
