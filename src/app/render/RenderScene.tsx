@@ -290,7 +290,12 @@ export default function RenderScene() {
           >
             <div className={styles.cardInner}>
               <div className={styles.outroFigure}>
-                <DotMatrix text={formatDistanceKm(stats.distance)} height={150} color="#C8F135" />
+                <DotMatrix
+                  text={formatDistanceKm(stats.distance)}
+                  height={150}
+                  color="#C8F135"
+                  align="center"
+                />
               </div>
               <div className={styles.outroUnit}>kilometres</div>
               <div className={styles.outroRow}>

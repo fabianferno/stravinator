@@ -15,12 +15,19 @@ export default function DotMatrix({
   height,
   color = "#FFFFFF",
   dim = "rgba(255,255,255,0.10)",
+  align = "left",
 }: {
   text: string;
   /** CSS pixels; the canvas is sized to match at 1:1 (the stage is never scaled). */
   height: number;
   color?: string;
   dim?: string;
+  /**
+   * Where the glyphs sit on the grid. The HUD tiles read left-to-right like a
+   * meter, so they keep `left`; a figure that stands alone on a card wants
+   * `center`, or the unlit cells to its right make it look shoved aside.
+   */
+  align?: "left" | "center";
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -45,9 +52,9 @@ export default function DotMatrix({
     if (!octx) return;
     octx.fillStyle = "#fff";
     octx.textBaseline = "middle";
-    octx.textAlign = "left";
+    octx.textAlign = align;
     octx.font = `600 ${Math.round(h * 0.96)}px ${getComputedStyle(canvas).fontFamily}`;
-    octx.fillText(text, 0, h / 2);
+    octx.fillText(text, align === "center" ? w / 2 : 0, h / 2);
     const src = octx.getImageData(0, 0, w, h).data;
 
     const pitch = Math.max(4, Math.round(h / 14));
@@ -62,7 +69,7 @@ export default function DotMatrix({
         ctx.fill();
       }
     }
-  }, [text, height, color, dim]);
+  }, [text, height, color, dim, align]);
 
   return (
     <canvas
