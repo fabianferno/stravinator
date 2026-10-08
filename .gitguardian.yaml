@@ -1,0 +1,6 @@
+version: 2
+
+secret:
+  # Recorded Strava API responses used by tests. The tokens in them are fake.
+  ignored_paths:
+    - "fixtures/**"
